@@ -8,7 +8,6 @@ from dash import dcc
 from dash import html
 import plotly.io as pio
 import dash
-import country_converter as coco
 
 dash.register_page(__name__)
 
@@ -47,7 +46,7 @@ def find_stats(dataframe):
     me['w_O3']=dd.groupby(['Country','Year']).apply(w_avg,'O3','Population')
     me.Population = me.Population.round(decimals=-3)
     me = me.reset_index()
-    me['iso'] = coco.convert(names=me.Country,to='ISO3')
+    #me['iso'] = coco.convert(names=me.Country,to='ISO3')
 
     _ma = dataframe.groupby(['Country','Year']).max(numeric_only=True)[['Population','PM','O3','NO2','Latitude','Longitude']].round(decimals = 2)
     _ma.Population = me.Population
@@ -161,9 +160,9 @@ def update_graph(xaxis_column_name, yaxis_column_name,
         m = fmean.query('Year == @year_value')
     #m = m.query('@pop_limit[0] < Population <@pop_limit[1]')
     
-    fig = px.choropleth(m, locations = 'iso',
+    fig = px.choropleth(m, locations = 'Country',locationmode = 'country names',
             hover_name='Country',
-            color = yaxis_column_name,hover_data={'Latitude':False,'Longitude':False,'iso':False}, color_continuous_scale='OrRd')
+            color = yaxis_column_name,hover_data={'Latitude':False,'Longitude':False}, color_continuous_scale='OrRd')
 
     #fig.update_layout(legend=dict(groupclick="toggleitem"))
 

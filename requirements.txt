@@ -5,4 +5,3 @@ plotly
 gunicorn
 dash-bootstrap-components
 openpyxl
-country_converter

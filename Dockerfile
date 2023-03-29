@@ -13,4 +13,4 @@ USER appUser
 
 EXPOSE 8050
 
-CMD gunicorn --bind 0.0.0.0:8050 app:server
+CMD gunicorn --bind 0.0.0.0:8050 index:server
