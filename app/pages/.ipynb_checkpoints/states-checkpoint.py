@@ -242,7 +242,7 @@ layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
         dbc.Col(
             html.Div(style={'backgroundColor': colors['background']}, children=[html.H1(children='Map of Mean State Concentration', style={'textAlign': 'center','color': colors['text'],'font':'helvetica','font-weight':'bold'}),html.Div(children='Exploring Statewide Trends', style={'textAlign': 'center','color': colors['subtext'],'font':'helvetica'})])),dbc.Col(width=2)]),
     dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(dbc.Stack([region_buttons,lin_log],className="radio-group"),width=4),dbc.Col(state_drop,width=2),dbc.Col(city_drop,width=2)]),
-    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack)]),
+    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(slider)],fluid=True)
 
 
@@ -411,7 +411,7 @@ def update_y_timeseries(region,hoverData, yaxis_column_name, xaxis_type,year_val
             marker=dict(
                 symbol='circle-open-dot',
                 color='#FAED26',
-                size=6,
+                size=10,
                 line=dict(
                     width=2
             )

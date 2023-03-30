@@ -187,7 +187,7 @@ layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
                 'color': colors['subtext']
             })])),dbc.Col(width=2)]),
     dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(country_drop,width=2),dbc.Col(city_drop,className="radio-group",width=4)]),
-    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack)]),
+    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(slider)],fluid=True)
 
 @callback(

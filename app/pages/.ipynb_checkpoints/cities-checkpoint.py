@@ -120,19 +120,19 @@ sliders =  dbc.Stack([dcc.Slider(
         step=None
     )])
                       
-main_graph = dcc.Loading(dcc.Graph(
+main_graph = dcc.Graph(
             id='crossfilter-indicator-scatter',
             hoverData={'points': [{'customdata': 'Tokyo, Japan (13017)'}]}
-        ), type='circle')                        
-graph_stack = dbc.Stack([dcc.Loading(dcc.Graph(id='x-time-series'),type='circle'),
-        dcc.Loading(dcc.Graph(id='y-time-series'),type='circle')])
+        )                        
+graph_stack = dbc.Stack([dcc.Graph(id='x-time-series'),
+        dcc.Graph(id='y-time-series')])
 
         
 layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
         dbc.Col(
             html.Div(style={'backgroundColor': colors['background']}, children=[html.H1(children='Cities Scatter Plot', style={'textAlign': 'center','color': colors['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='Exploring Individual Cities', style={'textAlign': 'center','color': colors['subtext'],'font':'helvetica'})]),width={"offset": 2}),dbc.Col()]),
     dbc.Row([dbc.Col(pol_buttons,className="radio-group",width=2),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(cont_drop,width=8)]),dbc.Row(dbc.Col(city_drop,width={'offset':9})),dbc.Row(),
-    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack)]),
+    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(sliders)],fluid=True)
 
 @callback(
@@ -190,9 +190,8 @@ def update_graph(yaxis_column_name,
             opacity=1,
             marker=dict(
                 symbol='circle-dot',
-                #color=colors['subtext'],
+                color='#FAED26',
                 #size=11,
-                color='rgba(255,255,255,0.5)',
                 size=11,
                 line=dict(
                         color=colors['text'],
