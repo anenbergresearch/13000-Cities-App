@@ -1,0 +1,99 @@
+/* restyle radio items */
+.radio-group .form-check {
+  padding-left: 0;
+}
+
+.radio-group .btn-group > .form-check:not(:last-child) > .btn {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.radio-group .btn-group > .form-check:not(:first-child) > .btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+*{
+  font-family: 'Open Sans';
+}
+
+body {
+background-color: white;
+}
+
+.rc-slider-track {
+  background-color: #123C69;
+}
+
+.rc-slider-dot-active {  
+  border-color: #123C69;
+  border: solid 2px #123C69;
+}
+
+.rc-slider-handle {
+  background-color: #123C69;
+  border-color: #123C69;
+}
+
+.rc-slider-handle:hover {
+  border-color: #123C69;
+}
+
+.rc-slider-handle-active:active {
+  border-color: #123C69;
+}
+
+.accordion-button {
+    font-size: large;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #6A8099;
+    color: white
+}
+
+.navbar-brand
+{
+  color:white;
+  font-size: x-large;
+  margin: 0px;
+}
+
+.navbar .mb-5
+{
+  font-family: Helvetica;
+  color:white;
+  font-size: larger;
+  margin: 0px;
+}
+
+.is-focused:not(.is-open) > .Select-control {
+  border-color: #123C69;
+  box-shadow: 0 0 0 3px #6A809966;
+}
+
+.custom-dropdown .Select--multi .Select-value {
+  background-color: #fff;
+  border-color: #123C69;
+  color: #123C69;
+}
+.single-dropd .Select-value-label{
+  background-color: #fff;
+  border-color: #123C69;
+  font-size: medium;
+}
+
+.single-dropd .Select--single>.Select-control .Select-value, .Select-placeholder{
+  font-size: smaller;
+  color: #123C69;
+}
+
+.single-dropd .Select-input {
+    height: 34px;
+    padding-left: 10px;
+    padding-right: 10px;
+    vertical-align: middle;
+    font-size: smaller;
+    color: #123C69;
+}

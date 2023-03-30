@@ -5,7 +5,7 @@ import dash
 
 from app import app
 from app import server
-from pages import country, cities,states
+from pages import home,countries, cities,states
 
 # Connect the navbar to the index
 from components import navbar
@@ -24,14 +24,16 @@ app.layout = html.Div([
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/country':
-        return country.layout
+    if pathname == '/countries':
+        return countries.layout
     if pathname == '/cities':
         return cities.layout
     if pathname == '/states':
         return states.layout
+    if pathname == '/':
+        return home.layout
     else: # if redirected to unknown link
         return "404 Page Error! Please choose a link"
 
-#if __name__== '__main__':
-#    app.run_server(host= '127.0.0.1',debug=True)  
+if __name__== '__main__':
+    app.run_server(host= '127.0.0.1',debug=True)  
