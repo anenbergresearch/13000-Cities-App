@@ -13,13 +13,56 @@
   border-bottom-left-radius: 0;
   margin-left: -1px;
 }
+.nav-link {
+    display: block;
+    padding: var(--bs-nav-link-padding-y) var(--bs-nav-link-padding-x);
+    font-size: var(--bs-nav-link-font-size);
+    font-weight: var(--bs-nav-link-font-weight);
+    color: #6a8099;
+    text-decoration: none;
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out;
+}
 
+.btn-secondary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #123C69;
+    --bs-btn-border-color: #123C69;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6a8099;
+    --bs-btn-hover-border-color: #6a8099;
+    --bs-btn-focus-shadow-rgb: 130,138,145;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #6a8099;
+    --bs-btn-active-border-color: #6a8099;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #123C69;
+    --bs-btn-disabled-border-color: #123C69;
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: #123C69;
+    --bs-btn-border-color: #123C69;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #6c757d;
+    --bs-btn-hover-border-color: #6c757d;
+    --bs-btn-focus-shadow-rgb: 108,117,125;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #123C69;
+    --bs-btn-active-border-color: #123C69;
+    --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    --bs-btn-disabled-color: #6c757d;
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: #6c757d;
+    --bs-gradient: none;
+}
 *{
   font-family: 'Open Sans';
 }
 
 body {
 background-color: white;
+padding-top: 75px;
 }
 
 .rc-slider-track {
@@ -77,6 +120,14 @@ background-color: white;
   background-color: #fff;
   border-color: #123C69;
   color: #123C69;
+}
+
+.Select.has-value.Select--single > .Select-control .Select-value .Select-value-label, .Select.has-value.is-pseudo-focused.Select--single > .Select-control .Select-value .Select-value-label {
+    color: #123C69;
+}
+
+.has-value.Select--single>.Select-control .Select-value .Select-value-label, .has-value.is-pseudo-focused.Select--single>.Select-control .Select-value .Select-value-label {
+    color: #123C69;
 }
 .single-dropd .Select-value-label{
   background-color: #fff;

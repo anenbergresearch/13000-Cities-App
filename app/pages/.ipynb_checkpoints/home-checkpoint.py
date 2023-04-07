@@ -1,61 +1,25 @@
 import dash
 import pandas as pd
-import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, dcc, html, callback,dash_table
 import dash_bootstrap_components as dbc
+from components import buttons, const,data_prep
+
+
 dash.register_page(__name__, path='/')
 
 cb =pd.read_csv('./pages/Codebook.csv')
-df = pd.read_csv('./pages/unified_data_SR.csv')
-# c40 = pd.read_excel('./pages/cityid-c40_crosswalk.xlsx')
-# ID_pop = df[df['Year']==2019][['ID','Population']]
-# c40_p = c40.merge(ID_pop, how = 'left', left_on = 'city_id', right_on ='ID')
-# total = c40_p[['ID','c40','continent']].merge(df, how = 'right', on ='ID')
-# df = total[['ID','City','c40','Country','continent','Year','Population','NO2','PM','O3','CO2']].copy()
-# df['CityCountry'] = df.City + ', ' + df.Country + ' (' +df.ID.apply(int).apply(str) +')'
-# df['CO2']= df['CO2']/2000
-
-units={'CO2':'CO<sub>2</sub> (tonnes)','NO2': 'NO<sub>2</sub> (ppb)','O3':'O<sub>3</sub> (ppb)','PM': 'PM (μg/m<sup>3</sup>)',"Population":''}
-
-colors = {
-    'background': 'white',
-    'text': '#123C69',
-    'subtext': '#6a8099'
-}
-
+df = data_prep.DFILT
 m_limits= {'CO2':15e6,'NO2': 28,'O3':75,'PM':100}
 
 button_group = html.Div(
     [
-        dbc.RadioItems(
-            id="radios",
-            className="btn-group",
-            inputClassName="btn-check",
-            labelClassName="btn btn-outline-secondary",
-            labelCheckedClassName="secondary",
-            options=[
-                {"label": u'NO\u2082', "value": 'NO2'},
-                {"label": u'O\u2083', "value": 'O3'},
-                {"label": u'PM\u2082\u2085', "value": 'PM'},
-                {"label": u'CO\u2082', "value": 'CO2'},
-            ],
-            value='NO2',
-        style={'color':'#EEE2DC'}
-        )
-    ],
+        buttons.pol_buttons('')],
     className="radio-group",
 )
-slider = html.Div(dcc.Slider(
-        id='crossfilter-year--slider',
-        min=df['Year'].min(),
-        max=df['Year'].max(),
-        value=df['Year'].max(),
-        marks={str(year): str(year) for year in df['Year'].unique()},
-        step=None
-    ), style={'width': '95%', 'padding': '0px 20px 20px 20px'})
+slider = buttons.sliders(df)
 
 graph=dcc.Graph(
             id='welcome-map')
@@ -112,7 +76,7 @@ table= html.Div(
 layout = dbc.Container([
     html.H1(children='Exploring Air Pollution and Emissions in 13,000 Cities',style={
                     'textAlign': 'center',
-                    'color': colors['text'],'font':'helvetica','font-weight': 'bold'
+                    'color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'
                     
                 }),
     html.Hr(),
@@ -131,7 +95,7 @@ layout = dbc.Container([
 download= html.Div(
     [
         dbc.Button("Download CSV",
-                   href='./pages/unified_data_with_co2.csv',
+                   href='https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR.csv',
                    download='unified_data.csv',
                    external_link=True,
                    outline=True,
@@ -143,14 +107,14 @@ download= html.Div(
 
 @callback(
     Output('welcome-map', 'figure'),
-    [Input('radios', 'value'),
+    [Input('crossfilter-yaxis-column', 'value'),
      Input('crossfilter-year--slider', 'value'),
      ])
 
 def generate_graph(yaxis_column_name,             
                  year_value):
     plot= df.query('Year == @year_value').copy()     
-    plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+units[yaxis_column_name]+': ' +plot[yaxis_column_name].round(2).astype(str)
+    plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+const.UNITS[yaxis_column_name]+': ' +plot[yaxis_column_name].round(2).astype(str)
     p1 = plot[plot['c40']=='not_c40'].copy()
     p2 = plot[plot['c40']=='c40'].copy()
     fig = go.Figure(data=go.Scattergeo(
@@ -169,7 +133,7 @@ def generate_graph(yaxis_column_name,
                 color = p1[yaxis_column_name],
                 symbol = 'circle',
                 cmax = m_limits[yaxis_column_name],
-                colorbar_title=units[yaxis_column_name],
+                colorbar_title=const.UNITS[yaxis_column_name],
                 #showscale=False
             )))
     #fig.update_layout(legend=dict(groupclick="toggleitem"))
@@ -189,7 +153,7 @@ def generate_graph(yaxis_column_name,
                 color = p2[yaxis_column_name],
                 symbol = 'star',
                 cmax = m_limits[yaxis_column_name],
-                colorbar_title=units[yaxis_column_name]
+                colorbar_title=const.UNITS[yaxis_column_name]
             )))
     fig.update_layout(
         geo = dict(
@@ -245,9 +209,9 @@ def render_tab_content(active_tab):
         elif active_tab=='codebook':
             return[dbc.Row(dbc.Stack([dbc.Col(html.H3(children='Download the full dataset here',style={
                     'textAlign': 'center',
-                    'color': colors['text'],'font':'helvetica'})),dbc.Col(html.H5(children='See codebook below and the About tab for more information',style={
+                    'color': const.DISP['text'],'font':'helvetica'})),dbc.Col(html.H5(children='See codebook below and the About tab for more information',style={
                     'textAlign': 'center',
-                    'color': colors['subtext'],'font':'helvetica'})),dbc.Col(download)])),dbc.Row(dbc.Col(table))]
+                    'color': const.DISP['subtext'],'font':'helvetica'})),dbc.Col(download)])),dbc.Row(dbc.Col(table))]
             
     return "Content coming soon."
     

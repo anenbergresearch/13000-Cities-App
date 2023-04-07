@@ -6,22 +6,21 @@ import dash_bootstrap_components as dbc
 def Navbar():
 
     layout = html.Div([
-        dbc.Navbar(dbc.Container([
-            dbc.NavbarBrand("Home",href='/'),
-            dbc.Nav(
-                children=[
+        dbc.Navbar(dbc.Container([dbc.Row([dbc.Col(
+            dbc.NavbarBrand("Home",href='/')),dbc.Col(
+            dbc.Nav([
                     dbc.NavItem(dbc.NavLink("Cities", href="/cities")),
                     dbc.NavItem(dbc.NavLink("Countries", href="/countries")),
-                    dbc.NavItem(dbc.NavLink("States", href="/states")),
-
-                ] ,style={'font-size':'larger','color':'white','font-family':'helvetica'},
-                className='ms-auto',navbar=True,)]),
-            className='mb-5',
+                    dbc.NavItem(dbc.NavLink("States", href="/states"))],
+                style={'font-size':'large','color':'white','font-family':'helvetica'},className='me-auto',navbar=True,))])],
+            fluid=True),   
+            className='mb-1 fixed-top',
             color="#123C69",
-            sticky='top',
-            fixed=True,
+            #sticky='top',
+            #fixed=True,
             dark=True,
         ), 
+        
     ])
 
     return layout
