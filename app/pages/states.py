@@ -101,7 +101,7 @@ city_drop = dcc.Dropdown(
     Input("region-selection", "value"),
 )
 def chained_callback_state(country):
-    return sorted(df[country]['State'].unique())
+    return sorted(df[country]['State'].dropna().unique())
 
 #Update city dropdown based on selected state
 @callback(

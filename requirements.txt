@@ -5,3 +5,4 @@ plotly
 gunicorn
 dash-bootstrap-components
 openpyxl
+certifi
