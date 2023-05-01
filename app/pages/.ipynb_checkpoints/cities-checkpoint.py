@@ -27,9 +27,13 @@ pop_weight = dbc.Stack([buttons.pop_weighted('cities')],className="radio-group")
 
 lin_log=buttons.lin_log()
 
-off_canva = dbc.Stack([dbc.Button("Details", id="open-offcanvas", n_clicks=0,
-                   color='secondary'),
-                       dbc.Offcanvas([
+c40_sel = buttons.c40()
+
+membs =buttons.members()
+inst = buttons.instruct('open-offcanv')
+
+off_canva = dbc.Stack([
+                       dbc.Collapse([dbc.Card([
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
                     children="Select the pollutant to visualize with the buttons on the left",style ={'color':const.DISP['subtext']}
@@ -43,14 +47,10 @@ off_canva = dbc.Stack([dbc.Button("Details", id="open-offcanvas", n_clicks=0,
                     "Explore the cities by hovering over the graph on the left. The city your mouse is closest to will populate the population and time series plots on the right. Alternatively, select a city of interest by clicking or searching in the dropdown menu; your selection will be highlighted on the scatter plot and plotted on the right-hand side. ",style ={'color':const.DISP['subtext']}),
                 html.H5(children='Select a Year',style ={'color':const.DISP['text']},),
                 html.P(children=
-                    "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],
-                id="offcanvas",
+                    "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']})],body=True)],
+                id="offcanv",
                 style ={'color':const.DISP['text']},
-                title="More Information",
-                backdrop=False,
-                is_open=False,
-                autofocus=False,
-                placement='end'
+                is_open=True,
             )])
 
 city_drop = html.Div(dcc.Dropdown(
@@ -74,22 +74,34 @@ graph_stack = dbc.Stack([dcc.Graph(id='x-time-series'),
         dcc.Graph(id='y-time-series')])
 
         
-layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
-        dbc.Col(
-            html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Cities Scatter Plot', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='Exploring Individual Cities', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})]),width={"offset": 2}),dbc.Col()]),
-    dbc.Row([dbc.Col(pol_buttons,className="radio-group",width=2),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(cont_drop,width=8)]),dbc.Row([dbc.Col(pop_weight,width=4),dbc.Col(city_drop,width={'offset':4})]),dbc.Row(),
+layout =dbc.Container([dbc.Row([dbc.Col(width=4),dbc.Col(
+            html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Cities Scatter Plot', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='Exploring Individual Cities', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=4)]),
+        dbc.Row(dbc.Col(off_canva)),
+    dbc.Row([dbc.Col(pol_buttons,className="radio-group",width=2),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(cont_drop,width=8)]),dbc.Row([dbc.Col(pop_weight,width=3),dbc.Col(membs,className="radio-group",),dbc.Col(c40_sel),dbc.Col(city_drop)]),dbc.Row(),
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(sliders)],fluid=True)
 
+
+##Callbacks for open/close instructions and button changes
 @callback(
-    Output("offcanvas", "is_open"),
-    Input("open-offcanvas", "n_clicks"),
-    [State("offcanvas", "is_open")],
+    Output("offcanv", "is_open"),
+    Input("open-offcanv", "n_clicks"),
+    [State("offcanv", "is_open")],
 )
 def toggle_offcanvas(n1, is_open):
     if n1:
         return not is_open
     return is_open
+
+@callback(
+    Output("open-offcanv", "children"),
+    Input("open-offcanv", "n_clicks"),
+    [State("offcanv", "is_open")],
+)
+def toggle_button(n1, is_open):
+    if n1%2:
+        return "Open Details"
+    return "Close Details"
 
 @callback(
     [Output('crossfilter-data-typecities','options'),
@@ -121,34 +133,76 @@ def trigger_function(yaxis_col,data_type,yaxis,dtype):
     Input('crossfilter-year--slider', 'value'),
     Input('CityS', 'value'),
     Input('ContS','value'),
-    Input('crossfilter-data-typecities', 'value')
+    Input('crossfilter-data-typecities', 'value'),
+     Input('c40-toggle','value'),
+     Input('membsDrop','value')
      ])
 def update_graph(yaxis_column_name,
                  xaxis_type,
-                 year_value,cityS,contS,data_type):
+                 year_value,cityS,contS,data_type,toggle,memb):
     dff =df.query('Year == @year_value').copy()
     city_df = dff.query('CityCountry ==@cityS').copy()
     
-    c='c40'
-    nc='not_c40'
+
     if data_type == 'Population Weighted':
         yaxis_plot = 'Pw_'+yaxis_column_name
     else:
         yaxis_plot = yaxis_column_name
     plot = []
-    for i in contS:
-        _c=dff.query('c40 ==@c & continent==@i')
-        plot.append(go.Scatter(name = i, legendgroup= c,legendgrouptitle={'text':'C40 Cities'}, x=_c['Population'], y=_c[yaxis_plot], mode='markers',
-                               customdata=_c['CityCountry'],
-                               hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[yaxis_column_name]}: '+'%{y}',
-                              marker={'color':cont_dict[i][1], 'symbol':'star','size':10,'line':dict(width=0.8,
-                                        color=const.DISP['background'])}))
-        _nc=dff.query('c40 ==@nc & continent==@i')
-        plot.append(go.Scatter(name = i, legendgroup= nc, legendgrouptitle= {'text':'Other Cities'}, 
+    if memb == 'Number of Memberships':
+        _nc=dff.query('Memberships>0')
+        coll=['#f4f100', '#c9e52f', '#76c68f', '#22a7f0', '#115f9a']
+        if toggle == 'All Cities':
+            _nc=dff.query('Memberships==0') 
+            plot.append(go.Scatter(name = 'O Memberships', legendgroup= 'Memberships', legendgrouptitle= {'text':'Number of Memberships'}, 
+                                               x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
+                                               hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
+                                              marker={'color':'pink','opacity':0.4}))
+        for i in range(1,5):
+            _nc=dff.query('Memberships==@i')
+            if i ==4:
+                _nc=dff.query('Memberships>=@i')
+            plot.append(go.Scatter(name = str(i) +' Memberships', legendgroup= 'Memberships', legendgrouptitle= {'text':'Number of Memberships'}, 
                                x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
-                               hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
-                              marker={'color':cont_dict[i][1],'opacity':0.2}))
+                                hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',marker={'color':coll[i],'opacity':0.9}))
+        
+    elif memb == 'All Memberships':
+        if toggle == 'All Cities':
+            for i in contS:
+                _nc=dff.query('Memberships==0 & continent==@i')
+                plot.append(go.Scatter(name = i, legendgroup= 'Other Cities', legendgrouptitle= {'text':'Other Cities'}, 
+                                                   x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
+                                                   hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
+                                                  marker={'color':'lightgray','opacity':0.2}))
+        for m in const.MEMBERS:
+            _c =dff[dff[m]==True]
+            plot.append(go.Scatter(name = m, legendgroup= memb,legendgrouptitle={'text':memb+' Cities'}, x=_c['Population'], y=_c[yaxis_plot], mode='markers',
+                                       customdata=_c['CityCountry'],
+                                       hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[yaxis_column_name]}: '+'%{y}',
+                                      marker={'color':const.MEMBERS[m][1],'symbol':const.MEMBERS[m][0],'size':10,'opacity':0.8,'line':dict(width=0.5,
+                                                color=const.DISP['background'])}))      
+        
+    else:        
+        for i in contS:
+            _c=dff.query('continent==@i')
+
+            _c =_c[_c[memb]==True]
+            if toggle == 'All Cities':
+                _nc=dff.query('Memberships==0 & continent==@i')
+                plot.append(go.Scatter(name = i, legendgroup= 'Other Cities', legendgrouptitle= {'text':'Other Cities'}, 
+                                           x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
+                                           hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
+                                          marker={'color':cont_dict[i][1],'opacity':0.2}))
+            plot.append(go.Scatter(name = i, legendgroup= memb,legendgrouptitle={'text':memb +' Cities'}, x=_c['Population'], y=_c[yaxis_plot], mode='markers',
+                                       customdata=_c['CityCountry'],
+                                       hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[yaxis_column_name]}: '+'%{y}',
+                                      marker={'color':cont_dict[i][1], 'symbol':const.MEMBERS[memb][0],'size':10,'line':dict(width=0.8,
+                                            color=const.DISP['background'])}))
+            
+
+
     fig =go.Figure(data=plot)
+    
 
     fig.update_layout(legend=dict(groupclick="toggleitem"),legend_title_text='',paper_bgcolor= const.DISP['background'],plot_bgcolor=const.DISP['background'])
     fig.add_trace(

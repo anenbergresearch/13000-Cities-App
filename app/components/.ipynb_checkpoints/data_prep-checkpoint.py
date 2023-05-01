@@ -4,7 +4,7 @@ import json
 import pickle
 from urllib.request import urlopen
 
-df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR-v2.csv')
 
 def w_avg(df, values, weights):
     d = df[values]
@@ -23,7 +23,7 @@ DFILT = pd.concat([ds,da])
 
 #DFILT['CityCountry'] = DFILT.City + ', ' + DFILT.Country + ' (' +DFILT.ID.apply(int).apply(str) +')'
 countries = ['United States','China','India']
-df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR-v2.csv')
 #df['CO2']= df['CO2']/2000
 STATES_DF ={}
 ##Read US csv from GIT
@@ -40,8 +40,19 @@ id_dict={}
 
 with open('./pages/geojs/chinadict.pickle', 'rb') as handle:
     id_dict['China'] = pickle.load(handle)
+    
+def calculate_change(low,high,df,pol):
+    lowb = low+1
+    highb = high-1
+    ldf= df.query('@low <=Year <=@lowb').groupby('CityCountry')[['Population',pol]].mean()
+    hdf = df.query('@highb <=Year <=@high').groupby('CityCountry')[['Population',pol]].mean()
+    return ((hdf[pol]-ldf[pol])/ldf[pol])*100
 
+DF_CHANGE = DFILT.query('Year == 2019')[['CityCountry','Latitude','Longitude','Population','C40']].set_index('CityCountry')
 
+for i in ['NO2','PM','O3','CO2']:
+    DF_CHANGE[i] = calculate_change(2010,2019,DFILT,i)
+DF_CHANGE.reset_index(inplace=True)
 def find_stats(dataframe,region):
     me = dataframe.groupby([region,'Year']).mean(numeric_only=True)[['Population','PM','O3','NO2','CO2']].round(decimals= 2)
     dd = dataframe[[region,'Year','Population','O3','NO2','PM','CO2']].dropna()
@@ -71,7 +82,7 @@ DF = {}
 MEAN_DF = {}
 STATS ={}
 for i in countries:
-    DF[i] = DFILT.query('Country ==@i')[['ID','City','c40','Year','Population','NO2','PM','O3','CO2']]
+    DF[i] = DFILT.query('Country ==@i')[['ID','City','C40','Year','Population','NO2','PM','O3','CO2']]
     DF[i] = DF[i].merge(STATES_DF[i][['ID','State']], how='left',on='ID')
     if i =='China':
         DF[i] = DF[i][DF[i].State != '자강도']

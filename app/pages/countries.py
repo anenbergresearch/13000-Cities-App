@@ -30,6 +30,7 @@ graph_stack =dbc.Stack([
         dcc.Graph(id='country-trends-graph'),
     ])
 slider =buttons.sliders(df)
+inst = buttons.instruct('open-offcanvas-c')
 country_drop = dcc.Dropdown(
                     id='country-s',
                     options=sorted(df["Country"].unique()),
@@ -41,9 +42,7 @@ city_drop = dcc.Dropdown(
                     value='Washington D.C., United States (860)',
                 )
 lin_log=html.Div(buttons.lin_log(),className='ms-auto radio-group')
-off_canva = dbc.Stack([dbc.Button("Details", id="open-offcanvas", n_clicks=0,
-                   color='secondary'),
-                       dbc.Offcanvas([
+off_canva = dbc.Collapse([dbc.Card([
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
                     children="Select the pollutant to visualize with the buttons on the left",style ={'color':const.DISP['subtext']}
@@ -70,17 +69,10 @@ off_canva = dbc.Stack([dbc.Button("Details", id="open-offcanvas", n_clicks=0,
                     "The bottom right graph is a timeseries that compares the country mean (teal) concentration and the selected city trend (orange). The light gray lines indicate the minimum and maximum concentration values of the states over time. Hover over the graph to see the values.",style ={'color':const.DISP['subtext']}),
                 html.H5(children='Select a Year',style ={'color':const.DISP['text']},),
                 html.P(children=
-                    "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],
-                id="offcanvas-countries",
-                style ={'color':const.DISP['text'],'font-size':'xlarge'},
-                title="More Information",
-                backdrop=False,
-                is_open=False,
-                autofocus=False,
-                placement='end'
-            )])
+                    "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],body=True,              
+                style ={'color':const.DISP['text'],'font-size':'xlarge'})],id="offcanvas-countries",style ={'color':const.DISP['text']},is_open=True)
 
-layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
+layout =dbc.Container([dbc.Row([dbc.Col(width=4),
         dbc.Col(html.Div(style={'backgroundColor': const.DISP['background']}, children=[
             html.H1(
                 children='Map of Mean Concentration',
@@ -94,20 +86,30 @@ layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
             html.Div(children='Exploring Countrywide Trends', style={
                 'textAlign': 'center','font':'helvetica',
                 'color': const.DISP['subtext']
-            })])),dbc.Col(width=2)]),
+            })])),dbc.Col(inst,width=4)]),
+    dbc.Row(dbc.Col(off_canva)),
     dbc.Row([dbc.Col(pol_buttons,width=6),dbc.Col(country_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=4)]),
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(slider)],fluid=True)
 
 @callback(
     Output("offcanvas-countries", "is_open"),
-    Input("open-offcanvas", "n_clicks"),
+    Input("open-offcanvas-c", "n_clicks"),
     [State("offcanvas-countries", "is_open")],
 )
 def toggle_offcanvas(n1, is_open):
     if n1:
         return not is_open
     return is_open
+@callback(
+    Output("open-offcanvas-c", "children"),
+    Input("open-offcanvas-c", "n_clicks"),
+    [State("offcanvas-countries", "is_open")],
+)
+def toggle_button(n1, is_open):
+    if n1%2:
+        return "Open Details"
+    return "Close Details"
 
 #Creates dropdown list based on selected country
 @callback(
@@ -148,14 +150,14 @@ def update_graph(pollutant,
     
     fig = go.Figure(data=go.Choropleth(locations = m['Country'],locationmode = 'country names',customdata=m['Country'],
             z = m[pollutant],hovertext=m['text'],hoverinfo='text',
-                        colorscale='OrRd',
+                        colorscale=const.COLORSCALE,
                         zmin=0,
                        zmax=maxx))
     #Adds the hightlight of the country selected
     ctry = m.query('Country ==@countryS')  #Creates dataframe for highlighted country
     fig.add_traces(data=go.Choropleth(locations = ctry['Country'],locationmode = 'country names',
             z = ctry[pollutant],hoverinfo='skip',
-                        colorscale='OrRd',
+                        colorscale=const.COLORSCALE,
                         zmin=0,
                        zmax=maxx,marker = dict(line_width=3)))
     fig.update_geos(showframe=False)
@@ -214,7 +216,7 @@ def update_y_timeseries(hoverData, pollutant, xaxis_type,data_type,year_value,co
     title = '<b>{}</b><br>'.format(country_name)
     plot = []
     for i in const.COUNTRY_SCATTER:
-        _c=dff.query('c40 ==@i')
+        _c=dff.query('C40 ==@i')
         if _c.empty:
             continue
         plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[pollutant], mode='markers',

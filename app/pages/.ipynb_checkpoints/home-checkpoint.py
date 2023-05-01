@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import Input, Output, dcc, html, callback,dash_table
+from dash import Input, Output, dcc, html, callback,dash_table,State
 import dash_bootstrap_components as dbc
 from components import buttons, const,data_prep
 
@@ -12,7 +12,8 @@ dash.register_page(__name__, path='/')
 
 cb =pd.read_csv('./pages/Codebook.csv')
 df = data_prep.DFILT
-m_limits= {'CO2':15e6,'NO2': 28,'O3':75,'PM':100}
+pc_df = data_prep.DF_CHANGE
+m_limits= {'CO2':15e6,'NO2': 20,'O3':75,'PM':100}
 
 button_group = html.Div(
     [
@@ -23,6 +24,43 @@ slider = buttons.sliders(df)
 
 graph=dcc.Graph(
             id='welcome-map')
+pc_graph=dcc.Graph(
+            id='percent-change')
+
+range_slider = dcc.RangeSlider(
+    id= 'range',
+    value=[2000, 2019],
+    step=1,
+    marks={i: str(i) for i in range(2000, 2020, 1)},
+)
+city_drop = html.Div(dcc.Dropdown(
+                    id='CitySe',
+                    options=sorted(df["CityCountry"].unique()),
+                    style ={'color':'#123C69'},
+                    value='Tokyo, Japan (13017)',
+                ),className='single-dropd')
+
+dtable = dash_table.DataTable(
+    columns=[{"name": i, "id": i} for i in df.columns],
+    sort_action="native",
+    page_size=10,
+    style_table={"overflowX": "auto"},
+)
+
+download_button = dbc.Button("Download Filtered CSV", color='secondary')
+download_component = dcc.Download()
+
+@callback(
+    Output(download_component, "data"),
+    Input(download_button, "n_clicks"),
+    State(dtable, "derived_virtual_data"),
+    prevent_initial_call=True,
+)
+def download_data(n_clicks, data):
+    dff = pd.DataFrame(data)
+    return dcc.send_data_frame(dff.to_csv, "filtered_csv.csv")
+
+
 
 about_acc = html.Div(
     dbc.Accordion(
@@ -83,7 +121,9 @@ layout = dbc.Container([
     dbc.Tabs([
         
         dbc.Tab(label='Map', tab_id='welcome_map'),
+        dbc.Tab(label='Percent Change', tab_id='percent_change'),
         dbc.Tab(label='Data Codebook', tab_id='codebook'),
+        dbc.Tab(label='Data Download', tab_id='download'),
         dbc.Tab(label='About', tab_id='about'),
         ],
         id='tabs',
@@ -92,6 +132,19 @@ layout = dbc.Container([
     html.Div(id="tab-content", className="p-4"),
     ],fluid=True
 )
+
+@callback(
+    Output(dtable, "data"),
+    [Input('range', "value"),
+    Input('CitySe', "value"),]
+)
+def update_table(slider_value, city):
+    dff =df.query('CityCountry==@city')
+    dff = dff[dff.Year.between(slider_value[0], slider_value[1])]
+    return dff.to_dict("records")
+
+
+
 download= html.Div(
     [
         dbc.Button("Download CSV",
@@ -115,8 +168,8 @@ def generate_graph(yaxis_column_name,
                  year_value):
     plot= df.query('Year == @year_value').copy()     
     plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+const.UNITS[yaxis_column_name]+': ' +plot[yaxis_column_name].round(2).astype(str)
-    p1 = plot[plot['c40']=='not_c40'].copy()
-    p2 = plot[plot['c40']=='c40'].copy()
+    p1 = plot[plot['C40']==False].copy()
+    p2 = plot[plot['C40']==True].copy()
     fig = go.Figure(data=go.Scattergeo(
             lon = p1['Longitude'],
             lat = p1['Latitude'],
@@ -125,10 +178,10 @@ def generate_graph(yaxis_column_name,
             name= 'Non-C40 Cities',
             #marker_color = dff['NO2'],
             marker= dict(
-                colorscale = 'OrRd',
+                colorscale = const.COLORSCALE,
                 cmin = 0,
-                size=p1["Population"]/30000,
-                sizemode='area',
+                #size=p1["Population"]/30000,
+                #sizemode='area',
                 line_width=0,
                 color = p1[yaxis_column_name],
                 symbol = 'circle',
@@ -145,11 +198,13 @@ def generate_graph(yaxis_column_name,
             name= 'C40 Cities',
             #marker_color = dff['NO2'],
             marker= dict(
-                colorscale = 'OrRd',
+                colorscale = const.COLORSCALE,
                 cmin = 0,
-                size=p2["Population"]/30000,
-                sizemode='area',
-                line_width=0,
+                #size=p2["Population"]/30000,
+                #sizemode='area',
+                size = 10,
+                line_width=1,
+                line_color=const.MAP_COLORS['land'],
                 color = p2[yaxis_column_name],
                 symbol = 'star',
                 cmax = m_limits[yaxis_column_name],
@@ -158,14 +213,95 @@ def generate_graph(yaxis_column_name,
     fig.update_layout(
         geo = dict(
             showland = True,
-            landcolor = "#030c54",
+            landcolor = const.MAP_COLORS['lake'],
             coastlinewidth=0,
-            oceancolor = '#022fbe',
+            oceancolor = const.MAP_COLORS['ocean'],
             subunitcolor = "rgb(255, 255, 255)",
-            countrycolor = "#01013F",
+            countrycolor = const.MAP_COLORS['land'],
             countrywidth = 0.5,
             showlakes = True,
-            lakecolor = '#022fbe',
+            lakecolor = const.MAP_COLORS['ocean'],
+            showocean=True,
+            #showsubunits = True,
+            showcountries = True,
+            resolution = 50,
+        ),
+        plot_bgcolor = 'white',
+        template = 'simple_white',
+    legend_x=0, legend_y=0,
+            #title = '13,000 Cities ' +units[yaxis_column_name]+' Concentration in '+str(year_value)+'<br>(Hover for values)'
+        )
+    
+# #     fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')  
+    fig.update_layout(legend_title_text='', plot_bgcolor= '#022fbe', paper_bgcolor='white')
+
+
+    #f#ig.update_traces(customdata=dff['CityCountry'])
+    
+    fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')
+
+    return fig
+
+@callback(
+    Output('percent-change', 'figure'),
+    [Input('crossfilter-yaxis-column', 'value'),
+     ])
+def generate_pcgraph(yaxis_column_name):
+    plot =data_prep.DF_CHANGE
+    plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+const.UNITS_PC[yaxis_column_name]+': ' +plot[yaxis_column_name].round(2).astype(str)
+    p1 = plot[plot['C40']==False].copy()
+    p2 = plot[plot['C40']==True].copy()
+    fig = go.Figure(data=go.Scattergeo(
+            lon = p1['Longitude'],
+            lat = p1['Latitude'],
+            text = p1['Text'],
+            hoverinfo='text',
+            name= 'Non-C40 Cities',
+            #marker_color = dff['NO2'],
+            marker= dict(
+                colorscale = 'RdBu_r',
+                cmin = -50,
+                #size=p1["Population"]/30000,
+                #sizemode='area',
+                line_width=0,
+                color = p1[yaxis_column_name],
+                symbol = 'circle',
+                cmax = 50,
+                colorbar_title=const.UNITS_PC[yaxis_column_name],
+                #showscale=False
+            )))
+    #fig.update_layout(legend=dict(groupclick="toggleitem"))
+    fig.add_trace(go.Scattergeo(
+            lon = p2['Longitude'],
+            lat = p2['Latitude'],
+            text = p2['Text'],
+            hoverinfo='text',
+            name= 'C40 Cities',
+            #marker_color = dff['NO2'],
+            marker= dict(
+                colorscale = 'RdBu_r',
+                cmin = -50,
+                #size=p2["Population"]/30000,
+                #sizemode='area',
+                size = 10,
+                line_width=1,
+                line_color = const.MAP_COLORS['land'],
+                color = p2[yaxis_column_name],
+                symbol = 'star',
+                cmax = 50,
+                colorbar_title=const.UNITS_PC[yaxis_column_name]
+            )))
+    fig.update_layout(
+        geo = dict(
+            showland = True,
+            landcolor = const.MAP_COLORS['lake'],
+            coastlinewidth=0,
+            oceancolor = const.MAP_COLORS['ocean'],
+            subunitcolor = const.MAP_COLORS['land'],
+            countrycolor = const.MAP_COLORS['land'],
+            countrywidth = 0.5,
+            showlakes = True,
+            lakecolor = const.MAP_COLORS['ocean'],
             showocean=True,
             #showsubunits = True,
             showcountries = True,
@@ -178,7 +314,7 @@ def generate_graph(yaxis_column_name,
         )
     
 # #     fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')  
-    fig.update_layout(legend_title_text='', plot_bgcolor= '#022fbe', paper_bgcolor='white')
+    fig.update_layout(coloraxis_colorbar_x=-0.15,legend_title_text='', plot_bgcolor= '#022fbe', paper_bgcolor='white')
 
 
     #f#ig.update_traces(customdata=dff['CityCountry'])
@@ -206,6 +342,14 @@ def render_tab_content(active_tab):
             return [dbc.Row(dbc.Col(about_acc))]
         elif active_tab == "welcome_map":
             return [dbc.Row(dbc.Col(button_group)),dbc.Row(graph),dbc.Row(dbc.Col(slider))]#,dbc.Row(dbc.Col(slider))]
+        elif active_tab == "percent_change":
+            return [dbc.Row(html.H4(children='Percent change in concentration between 2010-2011 and 2018-2019',style={
+                    'textAlign': 'center',
+                    'color': const.DISP['subtext'],'font':'helvetica'})),dbc.Row(dbc.Col(button_group)),dbc.Row(pc_graph)]
+        elif active_tab=='download':
+            return [dbc.Row(html.H5(children='Select the city and year range to download filtered dataset',style={
+                    'textAlign': 'center',
+                    'color': const.DISP['text'],'font':'helvetica'})),dbc.Row([dbc.Col(city_drop)]),dbc.Row(range_slider),dbc.Row(dtable),dbc.Row(download_button),dbc.Row(download_component)]
         elif active_tab=='codebook':
             return[dbc.Row(dbc.Stack([dbc.Col(html.H3(children='Download the full dataset here',style={
                     'textAlign': 'center',

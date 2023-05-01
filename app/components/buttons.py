@@ -26,6 +26,32 @@ def lin_log():
                 )
     return linlog
 
+def c40():
+    city_drop = html.Div(dcc.Dropdown(
+                    id='membsDrop',
+                    options=['Global Covenant of Mayors','Breathe Life 2030','Climate Mayors (US ONLY)','Carbon Neutral Cities Alliance ','Resilient Cities Network','C40','All Memberships', 'Number of Memberships'],
+                    value='C40',
+                ),className='single-dropd')
+
+    return city_drop
+def members():
+    C40 = dbc.RadioItems(
+                    id='c40-toggle',
+                    className="btn-group",
+                    inputClassName="btn-check",
+                    labelClassName="btn btn-outline-secondary",
+                    labelCheckedClassName="secondary",
+                    options=[{'label': i, 'value': i} for i in ['Members','All Cities']],                
+                    value='Members',
+                    labelStyle={'display': 'inline-block'}
+                )
+    return C40
+
+def instruct(ids):
+    inst = html.Div(dbc.Button(children="Open Details", id=ids, n_clicks=0,
+                   color='primary'), className = 'd-grid col-6 mx-auto')
+    return inst
+
 def pol_buttons(ident):
     pols = dbc.RadioItems(
                 id="crossfilter-yaxis-column"+ident,

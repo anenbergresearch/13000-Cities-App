@@ -27,7 +27,7 @@ pol_buttons=dbc.Stack([buttons.pol_buttons(''),
             buttons.pop_weighted('')],className="radio-group")
 
 lin_log=html.Div(buttons.lin_log(),className ='ms-auto radio-group')
-
+inst = buttons.instruct('open-offcanvas')
 region_buttons= dbc.RadioItems(
                 id='region-selection',
                 className="btn-group",
@@ -39,9 +39,8 @@ region_buttons= dbc.RadioItems(
             )
 slider = buttons.sliders(df['China'])
 
-off_canva = dbc.Stack([dbc.Button("Details", id="open-offcanvas", n_clicks=0,
-                   color='secondary'),
-                       dbc.Offcanvas([
+off_canva = dbc.Collapse([
+                       dbc.Card([
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
                     children="Select the pollutant to visualize with the buttons on the left",style ={'color':const.DISP['subtext']}
@@ -68,15 +67,10 @@ off_canva = dbc.Stack([dbc.Button("Details", id="open-offcanvas", n_clicks=0,
                     "The bottom right graph is a timeseries that compares the statewide mean (teal) concentration with the country mean (black) and the selected city trend (orange). The light gray lines indicate the minimum and maximum concentration values of the states over time. Hover over the graph to see the values.",style ={'color':const.DISP['subtext']}),
                 html.H5(children='Select a Year',style ={'color':const.DISP['text']},),
                 html.P(children=
-                    "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],
-                id="offcanvas-states",
+                    "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],body=True
+            )],id="offcanvas-states",
                 style ={'color':const.DISP['text']},
-                title="More Information",
-                backdrop=False,
-                is_open=False,
-                autofocus=False,
-                placement='end'
-            )])
+                is_open=True,)
 
 ##Define graphs
 main_graph = dcc.Graph(
@@ -123,11 +117,19 @@ def toggle_offcanvas(n1, is_open):
     if n1:
         return not is_open
     return is_open
-
+@callback(
+    Output("open-offcanvas", "children"),
+    Input("open-offcanvas", "n_clicks"),
+    [State("offcanvas-states", "is_open")],
+)
+def toggle_button(n1, is_open):
+    if n1%2:
+        return "Open Details"
+    return "Close Details"
 
 ##Set-up layout with dbc container
-layout =dbc.Container([dbc.Row([dbc.Col(off_canva,width=2),
-        dbc.Col(html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Map of Mean State Concentration', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight':'bold'}),html.Div(children='Exploring Statewide Trends', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(width=2)]),
+layout =dbc.Container([dbc.Row([dbc.Col(width=4),
+        dbc.Col(html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Map of Mean State Concentration', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight':'bold'}),html.Div(children='Exploring Statewide Trends', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=4)]),dbc.Row(dbc.Col(off_canva)),
     dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(dbc.Stack([region_buttons],className="radio-group"),width=4),dbc.Col(state_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=2)]),
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(slider)],fluid=True)
@@ -162,21 +164,21 @@ def update_graph(region,pollutant,data_type,year_value,state):
     if region == 'United States':  #No outside geojson for USA so plot with plotly's internal USA-states locations
         fig = go.Figure(data=go.Choropleth(locations = m['State'],locationmode = 'USA-states',customdata=m['State'],
             z = m[pollutant],hovertext=m['text'],hoverinfo='text',
-                        colorscale='OrRd',zmin=0,zmax=maxx,
+                        colorscale=const.COLORSCALE,zmin=0,zmax=maxx,
                         ))
         fig.add_traces(data=go.Choropleth(locations = st['State'],locationmode = 'USA-states',
             z = st[pollutant],hoverinfo='skip',
-                        colorscale='OrRd',
+                        colorscale=const.COLORSCALE,
                         marker = dict(line_width=3),zmin=0,zmax=maxx))
         fig.update_geos(scope='usa')
         
     else: ##Use the uploaded geojson files for China and India states
         fig = go.Figure(data=go.Choropleth(locations=m["State"], geojson=c_gjson[region],z=m[pollutant],
                            hovertext=m['text'],featureidkey=feature_id[region], hoverinfo='text',
-                           colorscale='OrRd',zmin=0,zmax=maxx))
+                           colorscale=const.COLORSCALE,zmin=0,zmax=maxx))
         fig.add_traces(data=go.Choropleth(locations = st['State'],geojson=c_gjson[region],featureidkey=feature_id[region],
             z = st[pollutant],hoverinfo='skip',
-                        colorscale='OrRd',zmin=0,zmax=maxx,
+                        colorscale=const.COLORSCALE,zmin=0,zmax=maxx,
                         marker = dict(line_width=3)))
         fig.update_geos(fitbounds='locations',visible=False)
     fig.update_layout(legend_title_text='',margin={'l': 10, 'b': 10, 't': 10, 'r': 0}, hovermode='closest')
@@ -252,7 +254,7 @@ def update_y_timeseries(region,hoverData, pollutant, xaxis_type,year_value,state
     title = '<b>{}</b><br>{}'.format(state_name, pollutant)
     plot = []
     for i in const.COUNTRY_SCATTER:
-        _c=dff.query('c40 ==@i')
+        _c=dff.query('C40 ==@i')
         plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[pollutant], mode='markers',
                                customdata=_c['CityID'],
                                hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[pollutant]}: '+'%{y}',
