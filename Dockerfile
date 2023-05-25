@@ -7,7 +7,7 @@ LABEL maintainer "Sara Runkel, sara.runkel@gwu.edu"
 WORKDIR "/app"
 RUN conda install --file /tmp/requirements.txt -c conda-forge
 RUN conda install gunicorn -y 
-
+RUN conda install uwsgi -y
 RUN useradd -m appUser
 USER appUser
 

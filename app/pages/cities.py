@@ -26,6 +26,7 @@ pol_buttons=dbc.Stack([buttons.pol_buttons('cities')],className="radio-group")
 pop_weight = dbc.Stack([buttons.pop_weighted('cities')],className="radio-group")
 
 lin_log=buttons.lin_log()
+metrics = buttons.health_metrics('')
 
 c40_sel = buttons.c40()
 
@@ -34,11 +35,23 @@ inst = buttons.instruct('open-offcanv')
 
 off_canva = dbc.Stack([
                        dbc.Collapse([dbc.Card([
+                 html.H5(children='Metric',style ={'color':const.DISP['text']},),
+                 html.P(   
+                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant (not available for CO2)",style ={'color':const.DISP['subtext']}
+                ),
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
                     children="Select the pollutant to visualize with the buttons on the left",style ={'color':const.DISP['subtext']}
                 ),
-                 html.H5(children='Population Axis',style ={'color':const.DISP['text']}),
+                 html.H5(children='Continent',style ={'color':const.DISP['text']}),
+                 html.P(children=   
+                    "Select the continents to appear on the scatter plot",style ={'color':const.DISP['subtext']}
+                ),
+                html.H5(children='Memberships',style ={'color':const.DISP['text']}),
+                 html.P(children=   
+                    "Select whether to see just cities that are members of climate groups, or all cities in the dataset. In the dropdown, select which membership group to plot. There is also an option to plot All Memberships, or to plot the number of memberships each city has.",style ={'color':const.DISP['subtext']}
+                ),
+                html.H5(children='Population Axis',style ={'color':const.DISP['text']}),
                  html.P(children=   
                     "Select whether you want the population data to be displayed with a logarithmic or linear axis using the center buttons",style ={'color':const.DISP['subtext']}
                 ),
@@ -74,10 +87,10 @@ graph_stack = dbc.Stack([dcc.Graph(id='x-time-series'),
         dcc.Graph(id='y-time-series')])
 
         
-layout =dbc.Container([dbc.Row([dbc.Col(width=4),dbc.Col(
-            html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Cities Scatter Plot', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='Exploring Individual Cities', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=4)]),
+layout =dbc.Container([dbc.Row([dbc.Col(metrics,className="radio-group",width=4),dbc.Col(
+            html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='City Climate Memberships', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='A closer look at climate membership cities', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=4)]),
         dbc.Row(dbc.Col(off_canva)),
-    dbc.Row([dbc.Col(pol_buttons,className="radio-group",width=2),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(cont_drop,width=8)]),dbc.Row([dbc.Col(pop_weight,width=3),dbc.Col(membs,className="radio-group",),dbc.Col(c40_sel),dbc.Col(city_drop)]),dbc.Row(),
+    dbc.Row([dbc.Col(pol_buttons,className="radio-group",width=2),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(cont_drop,width=8)]),dbc.Row([dbc.Col(width=4),dbc.Col(membs,className="radio-group",),dbc.Col(c40_sel),dbc.Col(city_drop)]),dbc.Row(),
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(sliders)],fluid=True)
 
@@ -103,29 +116,35 @@ def toggle_button(n1, is_open):
         return "Open Details"
     return "Close Details"
 
+
+
+##Deactivates CO2 if anything but concentration is selected and vice-versa
 @callback(
-    [Output('crossfilter-data-typecities','options'),
+    [Output('health-metrics','options',allow_duplicate=True),
     Output('crossfilter-yaxis-columncities','options')],
     [Input('crossfilter-yaxis-columncities', 'value'),
-    Input('crossfilter-data-typecities', 'value'),
+    Input('health-metrics', 'value'),
     Input('crossfilter-yaxis-columncities', 'options'),
-    Input('crossfilter-data-typecities', 'options')])
+    Input('health-metrics', 'options')],
+    prevent_initial_call=True,
+    )
 def trigger_function(yaxis_col,data_type,yaxis,dtype):
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if input_id =='crossfilter-yaxis-columncities':
         if yaxis_col == 'CO2':
-            dtype = const.dtype_options(True)
+            dtype = const.metric_options(True)
         else:
-            dtype = const.dtype_options(False)
+            dtype = const.metric_options(False)
             
-    else:
-        if data_type =='Population Weighted':
+    elif input_id == 'health-metrics':
+        if data_type !='Concentration':
             yaxis = const.pol_options(True)
         else:
             yaxis = const.pol_options(False)
     return dtype,yaxis
     
+
 @callback(
     Output('crossfilter-indicator-scatter', 'figure'),
     [Input('crossfilter-yaxis-columncities', 'value'),
@@ -133,21 +152,22 @@ def trigger_function(yaxis_col,data_type,yaxis,dtype):
     Input('crossfilter-year--slider', 'value'),
     Input('CityS', 'value'),
     Input('ContS','value'),
-    Input('crossfilter-data-typecities', 'value'),
      Input('c40-toggle','value'),
-     Input('membsDrop','value')
+     Input('membsDrop','value'),
+     Input('health-metrics','value')
      ])
 def update_graph(yaxis_column_name,
                  xaxis_type,
-                 year_value,cityS,contS,data_type,toggle,memb):
+                 year_value,cityS,contS,toggle,memb,metric):
     dff =df.query('Year == @year_value').copy()
     city_df = dff.query('CityCountry ==@cityS').copy()
     
-
-    if data_type == 'Population Weighted':
-        yaxis_plot = 'Pw_'+yaxis_column_name
+    if metric != 'Concentration':
+        yaxis_plot = metric +'_'+yaxis_column_name
     else:
         yaxis_plot = yaxis_column_name
+    
+    
     plot = []
     if memb == 'Number of Memberships':
         _nc=dff.query('Memberships>0')
@@ -156,7 +176,7 @@ def update_graph(yaxis_column_name,
             _nc=dff.query('Memberships==0') 
             plot.append(go.Scatter(name = 'O Memberships', legendgroup= 'Memberships', legendgrouptitle= {'text':'Number of Memberships'}, 
                                                x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
-                                               hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
+                                               hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[metric][yaxis_column_name]}: '+ '%{y}',
                                               marker={'color':'pink','opacity':0.4}))
         for i in range(1,5):
             _nc=dff.query('Memberships==@i')
@@ -164,7 +184,7 @@ def update_graph(yaxis_column_name,
                 _nc=dff.query('Memberships>=@i')
             plot.append(go.Scatter(name = str(i) +' Memberships', legendgroup= 'Memberships', legendgrouptitle= {'text':'Number of Memberships'}, 
                                x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
-                                hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',marker={'color':coll[i],'opacity':0.9}))
+                                hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[metric][yaxis_column_name]}: '+ '%{y}',marker={'color':coll[i],'opacity':0.9}))
         
     elif memb == 'All Memberships':
         if toggle == 'All Cities':
@@ -172,13 +192,13 @@ def update_graph(yaxis_column_name,
                 _nc=dff.query('Memberships==0 & continent==@i')
                 plot.append(go.Scatter(name = i, legendgroup= 'Other Cities', legendgrouptitle= {'text':'Other Cities'}, 
                                                    x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
-                                                   hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
+                                                   hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[metric][yaxis_column_name]}: '+ '%{y}',
                                                   marker={'color':'lightgray','opacity':0.2}))
         for m in const.MEMBERS:
             _c =dff[dff[m]==True]
             plot.append(go.Scatter(name = m, legendgroup= memb,legendgrouptitle={'text':memb+' Cities'}, x=_c['Population'], y=_c[yaxis_plot], mode='markers',
                                        customdata=_c['CityCountry'],
-                                       hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[yaxis_column_name]}: '+'%{y}',
+                                       hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[metric][yaxis_column_name]}: '+'%{y}',
                                       marker={'color':const.MEMBERS[m][1],'symbol':const.MEMBERS[m][0],'size':10,'opacity':0.8,'line':dict(width=0.5,
                                                 color=const.DISP['background'])}))      
         
@@ -191,11 +211,11 @@ def update_graph(yaxis_column_name,
                 _nc=dff.query('Memberships==0 & continent==@i')
                 plot.append(go.Scatter(name = i, legendgroup= 'Other Cities', legendgrouptitle= {'text':'Other Cities'}, 
                                            x=_nc['Population'],y=_nc[yaxis_plot],mode='markers',customdata=_nc['CityCountry'],
-                                           hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[yaxis_column_name]}: '+ '%{y}',
+                                           hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br> ' + f'{const.UNITS[metric][yaxis_column_name]}: '+ '%{y}',
                                           marker={'color':cont_dict[i][1],'opacity':0.2}))
             plot.append(go.Scatter(name = i, legendgroup= memb,legendgrouptitle={'text':memb +' Cities'}, x=_c['Population'], y=_c[yaxis_plot], mode='markers',
                                        customdata=_c['CityCountry'],
-                                       hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[yaxis_column_name]}: '+'%{y}',
+                                       hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[metric][yaxis_column_name]}: '+'%{y}',
                                       marker={'color':cont_dict[i][1], 'symbol':const.MEMBERS[memb][0],'size':10,'line':dict(width=0.8,
                                             color=const.DISP['background'])}))
             
@@ -224,23 +244,32 @@ def update_graph(yaxis_column_name,
         )
     )    
     fig.update_xaxes(title='Population', type='linear' if xaxis_type == 'Linear' else 'log')
-    fig.update_yaxes(title=const.UNITS[yaxis_column_name])
+    fig.update_yaxes(title=const.UNITS[metric][yaxis_column_name])
     fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest') 
     return fig
 
 
-def create_time_series(dff, axis_type, title, axiscol_name,data_type):
-    if data_type == 'Population Weighted':
-        axis_plot = 'Pw_'+axiscol_name
+def create_time_series(dff, axis_type, title, axiscol_name,metric):
+    if metric != 'Concentration':
+        axis_plot = metric +'_'+axiscol_name
+        ytitle = metric
     else:
         axis_plot = axiscol_name
+        ytitle = const.UNITS[metric][axiscol_name]
     if axiscol_name == 'Population':
-        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[axiscol_name],hovertemplate = '<b>'+f'{const.UNITS[axiscol_name]}: '+'</b>%{y:.2g}<extra></extra>'))
+        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+f'{const.UNITS[metric][axiscol_name]}: '+'</b>%{y:.2g}<extra></extra>'))
+        fig.update_traces(mode='lines+markers')
+        fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log',title = ytitle)
+    elif metric=='Concentration':
+        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
+        fig.update_traces(mode='lines+markers')
+        fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log',title = ytitle)
     else:
-        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
-    fig.update_traces(mode='lines+markers')
+        fig = go.Figure(go.Bar(x=dff['Year'], y=dff[axis_plot],marker=dict(color =dff['Population'],colorscale= 'Darkmint',colorbar={'title':'Pop'}),name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
+        #fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
+    
     fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log',title = const.UNITS[axiscol_name])
+    
     fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
                        xref='paper', yref='paper', showarrow=False, align='left',
                        bgcolor='rgba(255, 255, 255, 0.5)', text=title)
@@ -249,16 +278,23 @@ def create_time_series(dff, axis_type, title, axiscol_name,data_type):
 @callback(
     Output('x-time-series', 'figure'),
     [Input('crossfilter-indicator-scatter', 'hoverData'),
-     Input('crossfilter-xaxis-type', 'value'),
-    Input('CityS', 'value')])
-def update_y_timeseries(hoverData, axis_type,city_sel):
+    Input('crossfilter-xaxis-type', 'value'),
+    Input('CityS', 'value'),
+    Input('health-metrics','value'),
+    Input('crossfilter-yaxis-columncities', 'value')])
+def update_y_timeseries(hoverData, axis_type,city_sel,metric,yaxis):
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if metric == 'Concentration':
+        plot_axis = 'Population'
+    else:
+        plot_axis = yaxis
+        axis_type = 'Linear'
     city_sel = hoverData['points'][0]['customdata'] if input_id == 'crossfilter-indicator-scatter' else city_sel
     dff = df[df['CityCountry'] == city_sel] 
     country_name = dff['CityCountry'].iloc[0]
-    title = '<b>{}</b><br>{}'.format(country_name, 'Population')
-    return create_time_series(dff, axis_type, title, 'Population','Unw')
+    title = '<b>{}</b><br>{}'.format(const.UNITS[metric][plot_axis], country_name)
+    return create_time_series(dff, axis_type, title, plot_axis,metric)
 
 
 @callback(
@@ -266,15 +302,14 @@ def update_y_timeseries(hoverData, axis_type,city_sel):
     [Input('crossfilter-indicator-scatter', 'hoverData'),
      Input('crossfilter-yaxis-columncities', 'value'),
      Input('CityS', 'value'),
-     Input('crossfilter-data-typecities', 'value')
      ])
-def update_x_timeseries(hoverData, yaxis_column_name,city_sel,data_type):
+def update_x_timeseries(hoverData, yaxis_column_name,city_sel):
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
     city_sel = hoverData['points'][0]['customdata'] if input_id == 'crossfilter-indicator-scatter' else city_sel
     dff = df[df['CityCountry'] == city_sel] 
     country_name = dff['CityCountry'].iloc[0]
-    return create_time_series(dff, 'Linear', country_name,yaxis_column_name,data_type)
+    return create_time_series(dff, 'Linear', country_name,yaxis_column_name,'Concentration')
 
 @callback(
     Output("CityS", "value"),

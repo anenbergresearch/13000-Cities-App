@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from dash import Input, Output, dcc, html, callback,dash_table,State
 import dash_bootstrap_components as dbc
 from components import buttons, const,data_prep
+import copy
 
 
 dash.register_page(__name__, path='/')
@@ -13,11 +14,18 @@ dash.register_page(__name__, path='/')
 cb =pd.read_csv('./pages/Codebook.csv')
 df = data_prep.DFILT
 pc_df = data_prep.DF_CHANGE
-m_limits= {'CO2':15e6,'NO2': 20,'O3':75,'PM':100}
+conc= {'CO2':15e6,'NO2': 20,'O3':75,'PM':100}
+paf = {'CO2':'null','NO2': 25,'O3':20,'PM':40}
+cases = {'CO2':'null','NO2': 1000,'O3':100,'PM':1000}
+rates = {'CO2':'null','NO2': 100,'O3':40,'PM':110}
+
+m_limits = {'Concentration':conc,'PAF':paf,'Cases':cases,'Rates':rates}
+metrics = buttons.health_metrics('home')
+
 
 button_group = html.Div(
     [
-        buttons.pol_buttons('')],
+        buttons.pol_buttons('home')],
     className="radio-group",
 )
 slider = buttons.sliders(df)
@@ -36,10 +44,14 @@ range_slider = dcc.RangeSlider(
 city_drop = html.Div(dcc.Dropdown(
                     id='CitySe',
                     options=sorted(df["CityCountry"].unique()),
+                    value='Washington D.C., United States (860)',
                     style ={'color':'#123C69'},
-                    value='Tokyo, Japan (13017)',
                 ),className='single-dropd')
-
+country_drop = dcc.Dropdown(
+                    id='CountrySe',
+                    options=sorted(df["Country"].unique()),
+                    value='United States',
+                )
 dtable = dash_table.DataTable(
     columns=[{"name": i, "id": i} for i in df.columns],
     sort_action="native",
@@ -112,7 +124,7 @@ table= html.Div(
 )
 
 layout = dbc.Container([
-    html.H1(children='Exploring Air Pollution and Emissions in 13,000 Cities',style={
+    html.H1(children='Urban Air Quality Explorer',style={
                     'textAlign': 'center',
                     'color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'
                     
@@ -133,16 +145,33 @@ layout = dbc.Container([
     ],fluid=True
 )
 
+#Creates dropdown list based on selected country
+@callback(
+    Output("CitySe", "options"),
+    Output("CitySe", "value"),
+    Input("CountrySe", "value")
+)
+def chained_callback_city(country):
+
+    dff = copy.deepcopy(df)
+    if country is not None:
+        dff = dff.query("Country == @country")
+    return sorted(dff["CityCountry"].unique()),None
+
+##Filter data table
 @callback(
     Output(dtable, "data"),
     [Input('range', "value"),
-    Input('CitySe', "value"),]
+    Input('CountrySe', "value"),
+    Input('CitySe', "value")],
 )
-def update_table(slider_value, city):
-    dff =df.query('CityCountry==@city')
+def update_table(slider_value, country,city):
+    if city == None:
+        dff =df.query('Country==@country')
+    else:
+        dff =df.query('CityCountry==@city')
     dff = dff[dff.Year.between(slider_value[0], slider_value[1])]
     return dff.to_dict("records")
-
 
 
 download= html.Div(
@@ -158,35 +187,67 @@ download= html.Div(
     className="d-grid gap-2 col-6 mx-auto"
 )
 
+##Deactivates CO2 if anything but concentration is selected and vice-versa
+@callback(
+    [Output('health-metricshome','options',allow_duplicate=True),
+    Output('crossfilter-yaxis-columnhome','options',allow_duplicate=True)],
+    [Input('crossfilter-yaxis-columnhome', 'value'),
+    Input('health-metricshome', 'value'),
+    Input('crossfilter-yaxis-columnhome', 'options'),
+    Input('health-metricshome', 'options')],
+    prevent_initial_call=True,
+    )
+def trigger_function(yaxis_col,data_type,yaxis,dtype):
+    ctx = dash.callback_context
+    input_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if input_id =='crossfilter-yaxis-columnhome':
+        if yaxis_col == 'CO2':
+            dtype = const.metric_options(True)
+        else:
+            dtype = const.metric_options(False)
+            
+    elif input_id == 'health-metricshome':
+        if data_type !='Concentration':
+            yaxis = const.pol_options(True)
+        else:
+            yaxis = const.pol_options(False)
+    return dtype,yaxis
+
 @callback(
     Output('welcome-map', 'figure'),
-    [Input('crossfilter-yaxis-column', 'value'),
+    [Input('crossfilter-yaxis-columnhome', 'value'),
      Input('crossfilter-year--slider', 'value'),
+     Input('health-metricshome','value')
      ])
 
 def generate_graph(yaxis_column_name,             
-                 year_value):
-    plot= df.query('Year == @year_value').copy()     
-    plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+const.UNITS[yaxis_column_name]+': ' +plot[yaxis_column_name].round(2).astype(str)
-    p1 = plot[plot['C40']==False].copy()
-    p2 = plot[plot['C40']==True].copy()
+                 year_value,metric):
+    plot= df.query('Year == @year_value').copy()  
+    if metric != 'Concentration':
+        axis_plot = metric +'_'+yaxis_column_name
+    else:
+        axis_plot = yaxis_column_name
+    plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+const.UNITS[metric][yaxis_column_name]+': ' +plot[axis_plot].round(2).astype(str)
+    p1 = plot[plot['C40']==False].copy().dropna(subset=[axis_plot])
+    p2 = plot[plot['C40']==True].copy().dropna(subset=[axis_plot])
     fig = go.Figure(data=go.Scattergeo(
             lon = p1['Longitude'],
             lat = p1['Latitude'],
             text = p1['Text'],
             hoverinfo='text',
+            opacity = 0.8,
             name= 'Non-C40 Cities',
             #marker_color = dff['NO2'],
             marker= dict(
-                colorscale = const.COLORSCALE,
+                colorscale = const.CS[metric],
                 cmin = 0,
                 #size=p1["Population"]/30000,
                 #sizemode='area',
                 line_width=0,
-                color = p1[yaxis_column_name],
+                color = p1[axis_plot],
                 symbol = 'circle',
-                cmax = m_limits[yaxis_column_name],
-                colorbar_title=const.UNITS[yaxis_column_name],
+                cmax = m_limits[metric][yaxis_column_name],
+                colorbar_title=dict(text= const.UNITS[metric][yaxis_column_name],side='right'),
                 #showscale=False
             )))
     #fig.update_layout(legend=dict(groupclick="toggleitem"))
@@ -196,19 +257,20 @@ def generate_graph(yaxis_column_name,
             text = p2['Text'],
             hoverinfo='text',
             name= 'C40 Cities',
+            opacity = 0.8,
             #marker_color = dff['NO2'],
             marker= dict(
-                colorscale = const.COLORSCALE,
+                colorscale = const.CS[metric],
                 cmin = 0,
                 #size=p2["Population"]/30000,
                 #sizemode='area',
                 size = 10,
                 line_width=1,
-                line_color=const.MAP_COLORS['land'],
-                color = p2[yaxis_column_name],
+                line_color=const.MAP_COLORS['lake'],
+                color = p2[axis_plot],
                 symbol = 'star',
-                cmax = m_limits[yaxis_column_name],
-                colorbar_title=const.UNITS[yaxis_column_name]
+                cmax = m_limits[metric][yaxis_column_name],
+                colorbar_title=dict(text= const.UNITS[metric][yaxis_column_name],side='right')
             )))
     fig.update_layout(
         geo = dict(
@@ -228,12 +290,12 @@ def generate_graph(yaxis_column_name,
         ),
         plot_bgcolor = 'white',
         template = 'simple_white',
-    legend_x=0, legend_y=0,
+    legend_x=0, legend_y=0.5,
             #title = '13,000 Cities ' +units[yaxis_column_name]+' Concentration in '+str(year_value)+'<br>(Hover for values)'
         )
-    
+    ##fig.update_layout(coloraxis_colorbar_x=-0.15)
 # #     fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest')  
-    fig.update_layout(legend_title_text='', plot_bgcolor= '#022fbe', paper_bgcolor='white')
+    fig.update_layout(legend_title_text='', plot_bgcolor= '#022fbe', paper_bgcolor='white', )
 
 
     #f#ig.update_traces(customdata=dff['CityCountry'])
@@ -244,13 +306,13 @@ def generate_graph(yaxis_column_name,
 
 @callback(
     Output('percent-change', 'figure'),
-    [Input('crossfilter-yaxis-column', 'value'),
+    [Input('crossfilter-yaxis-columnhome', 'value'),
      ])
 def generate_pcgraph(yaxis_column_name):
     plot =data_prep.DF_CHANGE
     plot['Text'] = '<b>'+plot['CityCountry'] + '</b><br>'+const.UNITS_PC[yaxis_column_name]+': ' +plot[yaxis_column_name].round(2).astype(str)
-    p1 = plot[plot['C40']==False].copy()
-    p2 = plot[plot['C40']==True].copy()
+    p1 = plot[plot['C40']==False].copy().dropna()
+    p2 = plot[plot['C40']==True].copy().dropna()
     fig = go.Figure(data=go.Scattergeo(
             lon = p1['Longitude'],
             lat = p1['Latitude'],
@@ -259,7 +321,8 @@ def generate_pcgraph(yaxis_column_name):
             name= 'Non-C40 Cities',
             #marker_color = dff['NO2'],
             marker= dict(
-                colorscale = 'RdBu_r',
+                colorscale = [[0, '#072aed'],[0.5,'white'],
+                              [1,'#c70f02']], #'RdBu_r',
                 cmin = -50,
                 #size=p1["Population"]/30000,
                 #sizemode='area',
@@ -279,13 +342,14 @@ def generate_pcgraph(yaxis_column_name):
             name= 'C40 Cities',
             #marker_color = dff['NO2'],
             marker= dict(
-                colorscale = 'RdBu_r',
+                colorscale = [[0, 'blue'],[0.5,'white'],
+                              [1,'red']],#'RdBu_r',
                 cmin = -50,
                 #size=p2["Population"]/30000,
                 #sizemode='area',
                 size = 10,
                 line_width=1,
-                line_color = const.MAP_COLORS['land'],
+                line_color = const.MAP_COLORS['lake'],
                 color = p2[yaxis_column_name],
                 symbol = 'star',
                 cmax = 50,
@@ -341,7 +405,7 @@ def render_tab_content(active_tab):
         if active_tab == "about":
             return [dbc.Row(dbc.Col(about_acc))]
         elif active_tab == "welcome_map":
-            return [dbc.Row(dbc.Col(button_group)),dbc.Row(graph),dbc.Row(dbc.Col(slider))]#,dbc.Row(dbc.Col(slider))]
+            return [dbc.Row([dbc.Col(button_group),dbc.Col(metrics,className="radio-group")]),dbc.Row(graph),dbc.Row(dbc.Col(slider))]#,dbc.Row(dbc.Col(slider))]
         elif active_tab == "percent_change":
             return [dbc.Row(html.H4(children='Percent change in concentration between 2010-2011 and 2018-2019',style={
                     'textAlign': 'center',
@@ -349,7 +413,7 @@ def render_tab_content(active_tab):
         elif active_tab=='download':
             return [dbc.Row(html.H5(children='Select the city and year range to download filtered dataset',style={
                     'textAlign': 'center',
-                    'color': const.DISP['text'],'font':'helvetica'})),dbc.Row([dbc.Col(city_drop)]),dbc.Row(range_slider),dbc.Row(dtable),dbc.Row(download_button),dbc.Row(download_component)]
+                    'color': const.DISP['text'],'font':'helvetica'})),dbc.Row([dbc.Col(country_drop, width=5),dbc.Col(city_drop)]),dbc.Row(range_slider),dbc.Row(dtable),dbc.Row(download_button),dbc.Row(download_component)]
         elif active_tab=='codebook':
             return[dbc.Row(dbc.Stack([dbc.Col(html.H3(children='Download the full dataset here',style={
                     'textAlign': 'center',

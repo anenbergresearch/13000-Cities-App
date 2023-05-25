@@ -8,11 +8,25 @@ CITY = [["#58a862","#00e81d"],
 ["#cb4f42","#ff260f"],
 ["#6295cd","#6295cd"]]
 
-MAP_COLORS= {'ocean':'#d7e8fc','land':'#1e324a','lake':'white'}
-
-COLORSCALE ='RdYlGn_r'
+MAP_COLORS= {'ocean':'#d7e8fc','land':'#123c69','lake':'#FFF0C3'}
+#'#1e324a' '#d7e8fc'
+COLORSCALE =  [[0, '#21b504'],[0.5,'#fff70a'],
+                              [1,'#c70f02']] #'RdYlGn_r'
+CS ={'Concentration':[[0, '#21b504'],[0.5,'#fff70a'],
+                              [1,'#c70f02']],'Rates':'YlOrRd',
+                              'Cases':'YlOrRd','PAF':'YlOrRd'}
 ##Units for the different inputs
-UNITS={'CO2':'CO<sub>2</sub> (tonnes)','NO2': 'NO<sub>2</sub> (ppb)','O3':'O<sub>3</sub> (ppb)','PM': 'PM<sub>2.5</sub> (μg/m<sup>3</sup>)',"Population":'Population'}
+UNITS_conc={'CO2':'CO<sub>2</sub> (tonnes)','NO2': 'NO<sub>2</sub> (ppb)','O3':'O<sub>3</sub> (ppb)','PM': 'PM<sub>2.5</sub> (μg/m<sup>3</sup>)',"Population":'Population'}
+
+UNITS_PAF ={'NO2': 'NO<sub>2</sub> (Population Attributable Fraction %)','O3':'O<sub>3</sub> (Population Attributable Fraction %)','PM': 'PM<sub>2.5</sub> (Population Attributable Fraction %)',"Population":'Population'}
+
+UNITS_R ={'NO2': 'NO<sub>2</sub> (Attributable Pediatric Asthma Incidence/100K)','O3':'O<sub>3</sub> (Attributable Premature Deaths)','PM': 'PM<sub>2.5</sub> (Attributable Premature Deaths/100K)',"Population":'Population'}
+
+UNITS_C = {'NO2': 'NO<sub>2</sub> (Attributable Pediatric Asthma Incidence)','O3':'O<sub>3</sub> (Attributable Premature Deaths)','PM': 'PM<sub>2.5</sub> (Attributable Premature Deaths)',"Population":'Population'}
+
+
+UNITS = {'Concentration':UNITS_conc,'PAF':UNITS_PAF,'Rates':UNITS_R,'Cases':UNITS_C}
+
 
 UNITS_PC={'CO2':'Change in CO<sub>2</sub> (%)','NO2': 'Change in NO<sub>2</sub> (%)','O3':'Change in O<sub>3</sub> (%)','PM': 'Change in PM<sub>2.5</sub> (%)'}
 
@@ -39,3 +53,9 @@ def pol_options(value):
                     {"label": u'CO\u2082', "value": 'CO2', 'disabled':value}]
 def dtype_options(value):
     return [{'label': 'Unweighted', 'value': 'Unweighted'},{'label': 'Population Weighted', 'value': 'Population Weighted','disabled':value}]
+
+def metric_options(value):
+    return[{"label": 'Concentration', "value": 'Concentration'},
+                    {"label": 'PAF', "value": 'PAF','disabled':value},
+                    {"label": 'Cases', "value": 'Cases','disabled':value},
+                    {"label": 'Rates', "value": 'Rates', 'disabled':value}]

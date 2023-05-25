@@ -13,6 +13,7 @@ from components import navbar
 nav = navbar.Navbar()
 
 # Define the index page layout
+app.title = 'Urban AQ Explorer'
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     nav, 
