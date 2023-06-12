@@ -17,20 +17,25 @@ pio.templates.default = "simple_white"
 
 fmean,fmax,fmin = data_prep.MEAN,data_prep.MAX,data_prep.MIN
 
-pol_buttons = dbc.Stack([buttons.pol_buttons('country'),
-            buttons.pop_weighted('')
-            ],className="radio-group")
+
 main_graph =dcc.Graph(
             id='shaded-map',
             hoverData={'points': [{'customdata': 'United States'}]}
         )
 metrics = buttons.health_metrics('country')
+
+pol_buttons = dbc.Stack([metrics, buttons.pol_buttons('country')
+            ],className="radio-group")
+
+pops = html.Div(buttons.pop_weighted('')
+            ,className="radio-group")
 graph_stack =dbc.Stack([
         dcc.Graph(id='cities-scatter', hoverData={'points': [{'customdata': 'Washington D.C., United States (860)'}]}),
         dcc.Graph(id='country-trends-graph'),
     ])
 slider =buttons.sliders(df)
 inst = buttons.instruct('open-offcanvas-c')
+
 country_drop = dcc.Dropdown(
                     id='country-s',
                     options=sorted(df["Country"].unique()),
@@ -71,9 +76,9 @@ off_canva = dbc.Collapse([dbc.Card([
                 html.H5(children='Select a Year',style ={'color':const.DISP['text']},),
                 html.P(children=
                     "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],body=True,              
-                style ={'color':const.DISP['text'],'font-size':'xlarge'})],id="offcanvas-countries",style ={'color':const.DISP['text']},is_open=True)
+                style ={'color':const.DISP['text'],'font-size':'xlarge'})],id="offcanvas-countries",style ={'color':const.DISP['text']},is_open=False)
 
-layout =dbc.Container([dbc.Row([dbc.Col(metrics, className='radio-group',width=3),
+layout =dbc.Container([dbc.Row([dbc.Col(width=2),
         dbc.Col(html.Div(style={'backgroundColor': const.DISP['background']}, children=[
             html.H1(
                 children='Map of Mean Concentration',
@@ -87,10 +92,12 @@ layout =dbc.Container([dbc.Row([dbc.Col(metrics, className='radio-group',width=3
             html.Div(children='Exploring Countrywide Trends', style={
                 'textAlign': 'center','font':'helvetica',
                 'color': const.DISP['subtext']
-            })])),dbc.Col(inst,width=3)]),
+            })])),dbc.Col(inst,width=2)],align='center'),
     dbc.Row(dbc.Col(off_canva)),
-    dbc.Row([dbc.Col(pol_buttons,width=6),dbc.Col(country_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=4)]),
-    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
+    html.Hr(),
+    dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(pops,width=3),dbc.Col(country_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=3)]),
+    
+    dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5),html.Hr()]),
     dbc.Row(slider)],fluid=True)
 
 @callback(
@@ -102,15 +109,18 @@ def toggle_offcanvas(n1, is_open):
     if n1:
         return not is_open
     return is_open
+
+
 @callback(
     Output("open-offcanvas-c", "children"),
+    Output("open-offcanvas-ctt","children"),
     Input("open-offcanvas-c", "n_clicks"),
     [State("offcanvas-countries", "is_open")],
 )
 def toggle_button(n1, is_open):
     if n1%2:
-        return "Open Details"
-    return "Close Details"
+        return "Close Details", "Click Close Details to hide text."
+    return "Open Details","Click Open Details for more information on the compenents of the webpage."
 
 ##Deactivates CO2 if anything but concentration is selected and vice-versa
 @callback(
@@ -200,12 +210,21 @@ def update_graph(pollutant,
     fig.update_geos(showframe=False)
     fig.update_layout(legend_title_text='',paper_bgcolor= const.DISP['background'],plot_bgcolor=const.DISP['background'],margin={'l': 10, 'b': 10, 't': 10, 'r': 0}, hovermode='closest',coloraxis_colorbar_x=-0.1)
     fig.update_yaxes(title=pollutant)
-
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+        family = const.FONTFAMILY
+        ))
     return fig
 
 
 def create_time_series(city,means, title, cityname, axiscol_name,metric,units):
     fig = go.Figure()
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+            family = const.FONTFAMILY
+        ))
     fig.add_trace(go.Scatter(x= means.Year, y=means.Maximum, name = 'Maximum', 
                              marker = {'color':'lightgray'},line= {'color':'lightgray'},
         showlegend=True))
@@ -262,11 +281,18 @@ def update_y_timeseries(hoverData, pollutant, xaxis_type,data_type,year_value,co
         _c=dff.query('C40 ==@i')
         if _c.empty:
             continue
-        plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[plot_x], mode='markers',
-                               customdata=np.stack((_c['CityCountry'],_c[pollutant],_c['PAF_'+pollutant],_c['Cases_'+pollutant]),axis=-1),
-                               hovertemplate="<b>%{customdata[0]}</b><br>" +'Population: %{x} <br>' + f"{const.UNITS['Concentration'][pollutant]}: "+'%{customdata[1]} <br>'+ f"{const.UNITS['PAF'][pollutant]}: "+'%{customdata[2]} <br>' + f"{const.UNITS['Cases'][pollutant]}: "+'%{customdata[2]}',
+        if plot_x =='CO2':
+            plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[plot_x], mode='markers',
+                               customdata=np.stack((_c['CityCountry'],_c[pollutant]),axis=-1),
+                               hovertemplate="<b>%{customdata[0]}</b><br>" +'Population: %{x} <br>' + f"{const.UNITS['Concentration'][pollutant]}: "+'%{y} <br>',
                               marker={'color':const.COUNTRY_SCATTER[i]['color'], 'symbol':const.COUNTRY_SCATTER[i]['symbol'],'line':dict(width=1,
                                         color=const.COUNTRY_SCATTER[i]['color'])}))
+        else:
+            plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[plot_x], mode='markers',
+                                   customdata=np.stack((_c['CityCountry'],_c[pollutant],_c['PAF_'+pollutant],_c['Cases_'+pollutant]),axis=-1),
+                                   hovertemplate="<b>%{customdata[0]}</b><br>" +'Population: %{x} <br>' + f"{const.UNITS['Concentration'][pollutant]}: "+'%{customdata[1]} <br>'+ f"{const.UNITS['PAF'][pollutant]}: "+'%{customdata[2]} <br>' + f"{const.UNITS['Cases'][pollutant]}: "+'%{customdata[2]}',
+                                  marker={'color':const.COUNTRY_SCATTER[i]['color'], 'symbol':const.COUNTRY_SCATTER[i]['symbol'],'line':dict(width=1,
+                                            color=const.COUNTRY_SCATTER[i]['color'])}))
     fig =go.Figure(data=plot)
     fig.add_trace(
         go.Scattergl(
@@ -291,11 +317,17 @@ def update_y_timeseries(hoverData, pollutant, xaxis_type,data_type,year_value,co
         fig.update_yaxes(title=metric)
     else:
         fig.update_yaxes(title=const.UNITS[metric][pollutant])    
-    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
-                       xref='paper', yref='paper', showarrow=False, align='left',
-                       bgcolor='rgba(255, 255, 255, 0.5)', text=title)
+    
     fig.update_layout(height = 225, margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest',legend_title_text='',legend_x=1, legend_y=0,paper_bgcolor= const.DISP['background'],plot_bgcolor=const.DISP['background'])
-
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+        family = const.FONTFAMILY
+        ))
+    fig.add_annotation(x=0, y=0.73, xanchor='left', yanchor='bottom',
+                       xref='paper', yref='paper', showarrow=False, align='left',
+                       bgcolor='rgba(255, 255, 255, 0.5)', text=title, font=dict(size=12,
+            ),)
     return fig
 
 @callback(

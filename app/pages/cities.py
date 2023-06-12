@@ -21,17 +21,20 @@ for i in range(len(cont_l)):
 
 available_indicators = const.POLS
 
-pol_buttons=dbc.Stack([buttons.pol_buttons('cities')],className="radio-group")
 
-pop_weight = dbc.Stack([buttons.pop_weighted('cities')],className="radio-group")
+membs =buttons.members()
 
 lin_log=buttons.lin_log()
+pop_weight = dbc.Stack([buttons.pop_weighted('cities')],className="radio-group")
 metrics = buttons.health_metrics('')
+
+pol_buttons=dbc.Stack([metrics],className="radio-group")
 
 c40_sel = buttons.c40()
 
-membs =buttons.members()
+
 inst = buttons.instruct('open-offcanv')
+
 
 off_canva = dbc.Stack([
                        dbc.Collapse([dbc.Card([
@@ -63,22 +66,27 @@ off_canva = dbc.Stack([
                     "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']})],body=True)],
                 id="offcanv",
                 style ={'color':const.DISP['text']},
-                is_open=True,
+                is_open=False,
             )])
 
 city_drop = html.Div(dcc.Dropdown(
                     id='CityS',
                     options=sorted(df["CityCountry"].unique()),
                     value='Tokyo, Japan (13017)',
+                    placeholder= 'Select city...'
                 ),className='single-dropd')
 cont_drop = html.Div(dcc.Dropdown(
             id="ContS",
             value=list(cont_l.astype(str)),
             options=list(cont_l.astype(str)),
-            multi=True, style ={'color':'#123C69'}
+            multi=True, style ={'color':'#123C69'},
+            placeholder= 'Select continents...'
         ),className="custom-dropdown")
 sliders =  buttons.sliders(df)
-                      
+horz = dbc.Stack([pol_buttons,buttons.pol_buttons('cities'),membs,lin_log],direction="horizontal",
+            gap=2,className="radio-group")        
+drops = dbc.Stack([c40_sel,city_drop],direction ='horizontal',className='ms-auto')
+
 main_graph = dcc.Graph(
             id='crossfilter-indicator-scatter',
             hoverData={'points': [{'customdata': 'Tokyo, Japan (13017)'}]}
@@ -87,10 +95,10 @@ graph_stack = dbc.Stack([dcc.Graph(id='x-time-series'),
         dcc.Graph(id='y-time-series')])
 
         
-layout =dbc.Container([dbc.Row([dbc.Col(metrics,className="radio-group",width=4),dbc.Col(
-            html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='City Climate Memberships', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='A closer look at climate membership cities', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=4)]),
-        dbc.Row(dbc.Col(off_canva)),
-    dbc.Row([dbc.Col(pol_buttons,className="radio-group",width=2),dbc.Col(lin_log,className="radio-group",width=2),dbc.Col(cont_drop,width=8)]),dbc.Row([dbc.Col(width=4),dbc.Col(membs,className="radio-group",),dbc.Col(c40_sel),dbc.Col(city_drop)]),dbc.Row(),
+layout =dbc.Container([dbc.Row([dbc.Col(width=2),dbc.Col(
+            html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Urban Climate Network Memberships', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight': 'bold'}),html.Div(children='A closer look at cities in different urban climate networks', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=2)],align='center'),
+        dbc.Row([dbc.Col(off_canva),html.Hr()]),
+dbc.Row([dbc.Col(horz)]),dbc.Row([dbc.Col(cont_drop,width=7),dbc.Col(c40_sel,width=2),dbc.Col(city_drop,width=3)]),
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(sliders)],fluid=True)
 
@@ -108,13 +116,14 @@ def toggle_offcanvas(n1, is_open):
 
 @callback(
     Output("open-offcanv", "children"),
+    Output("open-offcanvtt","children"),
     Input("open-offcanv", "n_clicks"),
     [State("offcanv", "is_open")],
 )
 def toggle_button(n1, is_open):
     if n1%2:
-        return "Open Details"
-    return "Close Details"
+        return "Close Details", "Click Close Details to hide text."
+    return "Open Details","Click Open Details for more information on the compenents of the webpage."
 
 
 
@@ -246,6 +255,16 @@ def update_graph(yaxis_column_name,
     fig.update_xaxes(title='Population', type='linear' if xaxis_type == 'Linear' else 'log')
     fig.update_yaxes(title=const.UNITS[metric][yaxis_column_name])
     fig.update_layout(margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest') 
+    fig.update_layout(
+        legend = dict(
+            x=0,
+            y=1,
+            bgcolor='rgba(255, 255, 255, 0.5)',
+        borderwidth=0, font = dict(size = 18, color = const.DISP['text'])),
+        font=dict(
+        size=const.FONTSIZE,
+        family = const.FONTFAMILY
+        ))
     return fig
 
 
@@ -257,23 +276,30 @@ def create_time_series(dff, axis_type, title, axiscol_name,metric):
         axis_plot = axiscol_name
         ytitle = const.UNITS[metric][axiscol_name]
     if axiscol_name == 'Population':
-        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+f'{const.UNITS[metric][axiscol_name]}: '+'</b>%{y:.2g}<extra></extra>'))
+        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],customdata=np.stack((dff['Population'],dff[axis_plot]),axis=-1),hovertemplate = '<b>Population:</b> %{customdata[1]} <br><extra></extra>'))
         fig.update_traces(mode='lines+markers')
         fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log',title = ytitle)
     elif metric=='Concentration':
-        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
+        
+        fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], customdata=np.stack((dff['Population'],dff[axis_plot]),axis=-1),name = const.UNITS[metric][axiscol_name],hovertemplate = "<b>" f"{const.UNITS['Concentration'][axiscol_name]}: "+'</b> %{customdata[1]} <br><extra></extra>'))
         fig.update_traces(mode='lines+markers')
         fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log',title = ytitle)
     else:
-        fig = go.Figure(go.Bar(x=dff['Year'], y=dff[axis_plot],marker=dict(color =dff['Population'],colorscale= 'Darkmint',colorbar={'title':'Pop'}),name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
+        fig = go.Figure(go.Bar(x=dff['Year'], y=dff[axis_plot],marker=dict(color =dff['Population'],colorscale= 'Darkmint',colorbar={'title':'Pop'}),customdata=np.stack((dff['Population'],dff[axis_plot]),axis=-1),name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>Population: </b> %{customdata[0]}'+'<b><br>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y}<br><extra></extra>'))
         #fig = go.Figure(go.Scatter(x=dff['Year'], y=dff[axis_plot], name = const.UNITS[metric][axiscol_name],hovertemplate = '<b>'+ f'{const.UNITS[metric][axiscol_name]}: '+ '</b>%{y:.2f}<extra></extra>'))
     
     fig.update_xaxes(showgrid=False)
     
-    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
+    
+    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10},paper_bgcolor=const.DISP['background'], plot_bgcolor=const.DISP['background'])
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+        family = const.FONTFAMILY
+        ))
+    fig.add_annotation(x=0, y=0.73, xanchor='left', yanchor='bottom',
                        xref='paper', yref='paper', showarrow=False, align='left',
                        bgcolor='rgba(255, 255, 255, 0.5)', text=title)
-    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10},paper_bgcolor=const.DISP['background'], plot_bgcolor=const.DISP['background'])
     return fig
 @callback(
     Output('x-time-series', 'figure'),

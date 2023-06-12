@@ -8,8 +8,8 @@ CITY = [["#58a862","#00e81d"],
 ["#cb4f42","#ff260f"],
 ["#6295cd","#6295cd"]]
 
-MAP_COLORS= {'ocean':'#d7e8fc','land':'#123c69','lake':'#FFF0C3'}
-#'#1e324a' '#d7e8fc'
+MAP_COLORS= {'ocean':'#d7e8fc','land':'#123c69','lake':'white'}
+#'#1e324a' '#d7e8fc' #FFF0C3
 COLORSCALE =  [[0, '#21b504'],[0.5,'#fff70a'],
                               [1,'#c70f02']] #'RdYlGn_r'
 CS ={'Concentration':[[0, '#21b504'],[0.5,'#fff70a'],
@@ -36,11 +36,13 @@ POLS = ['O3','PM','NO2','CO2']
 #settings for the display
 DISP = {
     'background': 'white',
-    'text': '#123c69',
-    'subtext': '#6a8099'
+    'text': '#033c5a',
+    'subtext': '#708090',
+    'fades': '#6A8099',
 }
 
-
+FONTSIZE = 19
+FONTFAMILY = 'Lato'
 MEMBERS ={'Global Covenant of Mayors':['x','#76dfca'],'Breathe Life 2030':['star-triangle-up','#59a8d7'],'Climate Mayors (US ONLY)':['triangle-down','#3a6de5'],'Carbon Neutral Cities Alliance ':['diamond-wide','#ffa907'],'Resilient Cities Network':['hourglass','#d05d19'],'C40':['star','#ff0056']}
 
 COUNTRY_SCATTER = {True:dict(name='C40',color = 'rgba(30, 49, 133,0.9)',symbol='star'),False:dict(name='Other Cities',color = 'rgba(76, 179, 145,0.8)',symbol='circle')}

@@ -26,7 +26,7 @@ app.layout = html.Div([
 def display_page(pathname):
     if pathname == '/countries':
         return countries.layout
-    if pathname == '/cities':
+    if pathname == '/networks':
         return cities.layout
     if pathname == '/states':
         return states.layout
@@ -36,4 +36,4 @@ def display_page(pathname):
         return "404 Page Error! Please choose a link"
 
 if __name__== '__main__':
-    app.run_server(host= '127.0.0.1',debug=True)  
+    app.run_server(host= '0.0.0.0', debug=True)  

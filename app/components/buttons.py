@@ -8,8 +8,10 @@ def sliders(df):
         min=df['Year'].min(),
         max=df['Year'].max(),
         value=df['Year'].max(),
-        marks={str(year): str(year) for year in df['Year'].unique()},
-        step=None
+        marks= {str(year): {"label":str(year),"style":{'transform':'rotate(-45deg) translateX(-50%)'}} for year in df['Year'].unique()},
+        step=None,
+        included=False,
+        dots=False
     )])
     return layout
 
@@ -39,6 +41,15 @@ def health_metrics(name):
                 )
     return metrics
 
+def details_tip(tar):
+    tt= dbc.Tooltip(
+                "Click Open Details for more information on the compenents of the webpage.",
+                target=tar,
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    return tt
+
 def c40():
     city_drop = html.Div(dcc.Dropdown(
                     id='membsDrop',
@@ -61,8 +72,16 @@ def members():
     return C40
 
 def instruct(ids):
-    inst = html.Div(dbc.Button(children="Close Details", id=ids, n_clicks=0,
-                   color='primary'), className = 'd-grid col-6 mx-auto')
+    inst = html.Div([html.Div(dbc.Button(children="Open Details", id=ids, n_clicks=0,
+                   color='primary'), className = 'd-grid mx-auto'),
+                    dbc.Tooltip(
+                        children ="Click Open Details for more information on the compenents of the webpage.",
+                        id = ids+'tt',
+                        target=ids,
+                        is_open =True,
+                        trigger ='hover focus legacy'
+                    )]
+                   )
     return inst
 
 def pol_buttons(ident):
