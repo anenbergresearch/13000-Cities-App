@@ -8,8 +8,10 @@ def sliders(df):
         min=df['Year'].min(),
         max=df['Year'].max(),
         value=df['Year'].max(),
-        marks={str(year): str(year) for year in df['Year'].unique()},
-        step=None
+        marks= {str(year): {"label":str(year),"style":{'transform':'rotate(-45deg) translateX(-50%)'}} for year in df['Year'].unique()},
+        step=None,
+        included=False,
+        dots=False
     )])
     return layout
 
@@ -25,6 +27,46 @@ def lin_log():
                     labelStyle={'display': 'inline-block'}
                 )
     return linlog
+
+def health_metrics(name):
+    tt= dbc.Tooltip(
+                "Population Attributable Fraction (PAF) is the the proportion of cases for an outcome that can be attributed to the pollutant among the entire population",
+                target='PAF',
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    td= dbc.Tooltip(
+                "Annual cases for an outcome attributable to the pollutant.",
+                target='Cases',
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    ts= dbc.Tooltip(
+                "Annual cases for an outcome attributable to the pollutant per 100K people.",
+                target='Rates',
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    metrics=html.Div([dbc.RadioItems(
+                    id='health-metrics'+name,
+                    className="btn-group",
+                    inputClassName="btn-check",
+                    labelClassName="btn btn-outline-secondary",
+                    labelCheckedClassName="secondary",
+                    options=[{'label': i, 'value': i, 'label_id':i} for i in ['Concentration','PAF','Cases','Rates']],                
+                    value='Concentration',
+                    labelStyle={'display': 'inline-block'}
+                ),tt,td,ts])
+    return metrics
+
+def details_tip(tar):
+    tt= dbc.Tooltip(
+                "Click Open Details for more information on the compenents of the webpage.",
+                target=tar,
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    return tt
 
 def c40():
     city_drop = html.Div(dcc.Dropdown(
@@ -48,8 +90,16 @@ def members():
     return C40
 
 def instruct(ids):
-    inst = html.Div(dbc.Button(children="Open Details", id=ids, n_clicks=0,
-                   color='primary'), className = 'd-grid col-6 mx-auto')
+    inst = html.Div([html.Div(dbc.Button(children="Open Details", id=ids, n_clicks=0,
+                   color='primary'), className = 'd-grid mx-auto'),
+                    dbc.Tooltip(
+                        children ="Click Open Details for more information on the compenents of the webpage.",
+                        id = ids+'tt',
+                        target=ids,
+                        is_open =True,
+                        trigger ='hover focus legacy'
+                    )]
+                   )
     return inst
 
 def pol_buttons(ident):

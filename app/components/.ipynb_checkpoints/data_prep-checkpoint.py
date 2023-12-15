@@ -23,6 +23,9 @@ DFILT = pd.concat([ds,da])
 
 #DFILT['CityCountry'] = DFILT.City + ', ' + DFILT.Country + ' (' +DFILT.ID.apply(int).apply(str) +')'
 countries = ['United States','China','India']
+
+col_stats = ['Population','NO2','PM','O3','CO2','PAF_PM','PAF_NO2','PAF_O3','Cases_NO2','Cases_PM','Cases_O3','Rates_NO2','Rates_O3','Rates_PM']
+
 df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR-v2.csv')
 #df['CO2']= df['CO2']/2000
 STATES_DF ={}
@@ -54,25 +57,23 @@ for i in ['NO2','PM','O3','CO2']:
     DF_CHANGE[i] = calculate_change(2010,2019,DFILT,i)
 DF_CHANGE.reset_index(inplace=True)
 def find_stats(dataframe,region):
-    me = dataframe.groupby([region,'Year']).mean(numeric_only=True)[['Population','PM','O3','NO2','CO2']].round(decimals= 2)
-    dd = dataframe[[region,'Year','Population','O3','NO2','PM','CO2']].dropna()
-    me['w_NO2']=dd.groupby([region,'Year']).apply(w_avg,'NO2','Population')
-    me['w_PM']=dd.groupby([region,'Year']).apply(w_avg,'PM','Population')
-    me['w_O3']=dd.groupby([region,'Year']).apply(w_avg,'O3','Population')
-    me['w_CO2']=dd.groupby([region,'Year']).apply(w_avg,'CO2','Population')
+    me = dataframe.groupby([region,'Year']).mean(numeric_only=True)[col_stats].round(decimals= 2)
+    dd = dataframe[[region,'Year','Population','O3','NO2','PM','CO2','PAF_PM','PAF_NO2','PAF_O3','Cases_NO2','Cases_PM','Cases_O3','Rates_NO2','Rates_O3','Rates_PM']].dropna()
+    for i in col_stats[1:]:
+        me['w_'+i] =dd.groupby([region,'Year']).apply(w_avg,i,'Population')
     me.Population = me.Population.round(decimals=-3)
     me = me.reset_index()
     #me['iso'] = coco.convert(names=me.Country,to='ISO3')
 
-    _ma = dataframe.groupby([region,'Year']).max(numeric_only=True)[['Population','PM','O3','NO2','CO2']].round(decimals = 2)
+    _ma = dataframe.groupby([region,'Year']).max(numeric_only=True)[col_stats].round(decimals = 2)
     _ma.Population = me.Population
     _ma = _ma.reset_index()
 
-    _mi = dataframe.groupby([region,'Year']).min(numeric_only=True)[['Population','PM','O3','NO2','CO2']].round(decimals = 2)
+    _mi = dataframe.groupby([region,'Year']).min(numeric_only=True)[col_stats].round(decimals = 2)
     _mi.Population = me.Population
     _mi = _mi.reset_index()
     
-    _co = dataframe.groupby([region,'Year']).count()[['Population','PM','O3','NO2','CO2']]
+    _co = dataframe.groupby([region,'Year']).count()[col_stats]
     _co = _co.reset_index()
     return me,_ma,_mi, _co
 
@@ -81,8 +82,9 @@ MEAN,MAX,MIN,COUNT = find_stats(DFILT,'Country')
 DF = {}
 MEAN_DF = {}
 STATS ={}
+col_select = ['ID','City','C40','Year','Population','NO2','PM','O3','CO2','PAF_PM','PAF_NO2','PAF_O3','Cases_NO2','Cases_PM','Cases_O3','Rates_NO2','Rates_O3','Rates_PM']
 for i in countries:
-    DF[i] = DFILT.query('Country ==@i')[['ID','City','C40','Year','Population','NO2','PM','O3','CO2']]
+    DF[i] = DFILT.query('Country ==@i')[col_select]
     DF[i] = DF[i].merge(STATES_DF[i][['ID','State']], how='left',on='ID')
     if i =='China':
         DF[i] = DF[i][DF[i].State != '자강도']
@@ -90,6 +92,6 @@ for i in countries:
     DF[i]['CityID'] = DF[i].City + ' (' +DF[i].ID.apply(int).apply(str) +')'
     mean, _max, _min,count = find_stats(DF[i],'State')
     STATS[i]={'mean':mean,'min':_min,'max':_max,'count':count}
-    MEAN_DF[i] = DF[i].groupby('Year')[['NO2','PM','O3','CO2']].mean().reset_index()
+    MEAN_DF[i] = DF[i].groupby('Year')[col_stats[1:]].mean().reset_index()
     
 

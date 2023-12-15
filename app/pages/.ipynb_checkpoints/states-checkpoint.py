@@ -22,9 +22,8 @@ mean_df = data_prep.MEAN_DF
 #Import dataframe with stats for each state
 stats =data_prep.STATS
 c_gjson = data_prep.GJSON
-
-pol_buttons=dbc.Stack([buttons.pol_buttons(''),
-            buttons.pop_weighted('')],className="radio-group")
+metrics = buttons.health_metrics('state')
+pol_buttons=dbc.Stack([metrics,buttons.pol_buttons('state')],className="radio-group")
 
 lin_log=html.Div(buttons.lin_log(),className ='ms-auto radio-group')
 inst = buttons.instruct('open-offcanvas')
@@ -39,14 +38,17 @@ region_buttons= dbc.RadioItems(
             )
 slider = buttons.sliders(df['China'])
 
+
+
 off_canva = dbc.Collapse([
                        dbc.Card([
+                 html.H5(children='Metric',style ={'color':const.DISP['text']},),
+                 html.P(   
+                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant. For O3 and PM2.5, the metrics indicate premature deaths attributable to the corresponding pollutants. For NO2, the metrics indicate pediatric asthma incidence attributable to NO2. Health metrics are not available for CO2.",style ={'color':const.DISP['subtext']}
+                ),
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
-                    children="Select the pollutant to visualize with the buttons on the left",style ={'color':const.DISP['subtext']}
-                ),
-                html.P(   
-                    children="Select whether you would like to see the simple (unweighted) mean or the population weighted mean weighted by the population of each city within the state.",style ={'color':const.DISP['subtext']}
+                    children="Select the pollutant to visualize with the buttons on the left. Select whether you would like to see the simple (unweighted) mean or the population weighted mean weighted by the population of each city within the state.",style ={'color':const.DISP['subtext']}
                 ),
                 html.H5(children='Region',style ={'color':const.DISP['text']}),
                  html.P(children=   
@@ -70,7 +72,7 @@ off_canva = dbc.Collapse([
                     "Choose which year of data to visualize with the year slider on the bottom.",style ={'color':const.DISP['subtext']},)],body=True
             )],id="offcanvas-states",
                 style ={'color':const.DISP['text']},
-                is_open=True,)
+                is_open=False,)
 
 ##Define graphs
 main_graph = dcc.Graph(
@@ -92,20 +94,25 @@ city_drop = dcc.Dropdown(
 #Update state dropdown based on selected region
 @callback(
     Output("state-s", "options"),
+    Output("state-s",'value', allow_duplicate=True),
     Input("region-selection", "value"),
+    prevent_initial_call=True
 )
 def chained_callback_state(country):
-    return sorted(df[country]['State'].dropna().unique())
+    return sorted(df[country]['State'].dropna().unique()),sorted(df[country]['State'].unique())[0]
+
 
 #Update city dropdown based on selected state
 @callback(
     Output("city-sel", "options"),
+    Output("city-sel",'value', allow_duplicate=True),
     Input("region-selection", "value"),
     Input("state-s", "value"),
+    prevent_initial_call=True
 )
 def chained_callback_city(country,state):
     l = df[country][df[country]['State']==state]
-    return sorted(l['CityID'].unique())
+    return sorted(l['CityID'].unique()),sorted(l['CityID'].unique())[0]
 
 #Open offcanvas when button is clicked
 @callback(
@@ -117,83 +124,129 @@ def toggle_offcanvas(n1, is_open):
     if n1:
         return not is_open
     return is_open
+
+
 @callback(
     Output("open-offcanvas", "children"),
+    Output("open-offcanvastt","children"),
     Input("open-offcanvas", "n_clicks"),
     [State("offcanvas-states", "is_open")],
 )
 def toggle_button(n1, is_open):
     if n1%2:
-        return "Open Details"
-    return "Close Details"
+        return "Close Details", "Click Close Details to hide text."
+    return "Open Details","Click Open Details for more information on the compenents of the webpage."
 
 ##Set-up layout with dbc container
-layout =dbc.Container([dbc.Row([dbc.Col(width=4),
-        dbc.Col(html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Map of Mean State Concentration', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight':'bold'}),html.Div(children='Exploring Statewide Trends', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica'})])),dbc.Col(inst,width=4)]),dbc.Row(dbc.Col(off_canva)),
-    dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(dbc.Stack([region_buttons],className="radio-group"),width=4),dbc.Col(state_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=2)]),
+layout =dbc.Container([dbc.Row([dbc.Col(width=2),
+        dbc.Col(html.Div(style={'backgroundColor': const.DISP['background']}, children=[html.H1(children='Map of Mean State Concentration', style={'textAlign': 'center','color': const.DISP['text'],'font':'helvetica','font-weight':'bold'}),html.Div(children='Exploring Statewide Trends', style={'textAlign': 'center','color': const.DISP['subtext'],'font':'helvetica',})])),dbc.Col(inst,width=2),html.Hr()],align='center'),dbc.Row(dbc.Col(off_canva)), 
+    dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(dbc.Stack([region_buttons,buttons.pop_weighted('')],className="radio-group"),width=4),dbc.Col(state_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=2)]),
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5)]),
     dbc.Row(slider)],fluid=True)
 
-
+##Deactivates CO2 if anything but concentration is selected and vice-versa
+@callback(
+    [Output('health-metricsstate','options',allow_duplicate=True),
+    Output('crossfilter-yaxis-columnstate','options',allow_duplicate=True)],
+    [Input('crossfilter-yaxis-columnstate', 'value'),
+    Input('health-metricsstate', 'value'),
+    Input('crossfilter-yaxis-columnstate', 'options'),
+    Input('health-metricsstate', 'options')],
+    prevent_initial_call=True,
+    )
+def trigger_function(yaxis_col,data_type,yaxis,dtype):
+    ctx = dash.callback_context
+    input_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if input_id =='crossfilter-yaxis-columnstate':
+        if yaxis_col == 'CO2':
+            dtype = const.metric_options(True)
+        else:
+            dtype = const.metric_options(False)
+            
+    elif input_id == 'health-metricsstate':
+        if data_type !='Concentration':
+            yaxis = const.pol_options(True)
+        else:
+            yaxis = const.pol_options(False)
+    return dtype,yaxis
 
 ##Function to create main map of shaded states and update based on selections
 @callback(
     Output('shaded-states', 'figure'), #outputs maps
     [Input('region-selection', 'value'), #input of region (US, China, India)
-    Input('crossfilter-yaxis-column', 'value'), #input of pollutant
+    Input('crossfilter-yaxis-columnstate', 'value'), #input of pollutant
      Input('crossfilter-data-type', 'value'), #Population weighted or unweighted
      Input('crossfilter-year--slider', 'value'),
-     Input('state-s','value')
+     Input('state-s','value'),
+     Input('health-metricsstate','value')
      ])
-def update_graph(region,pollutant,data_type,year_value,state):
+def update_graph(region,pollutant,data_type,year_value,state,metric):
     unit_s = pollutant
+    if metric !='Concentration':
+        pollutant = metric +'_'+pollutant
     if data_type =='Population Weighted':
         pollutant = 'w_'+pollutant
     m = stats[region]['mean'].query('Year == @year_value').copy()
     st = m.query('State ==@state')
+    
     if 'CO2' in pollutant:
         if data_type == 'Unweighted':
             maxx= 7e6
         else:
             maxx =50e6
-        m['text'] = '<b>'+m['State'] + '</b><br>'+const.UNITS[unit_s]+': '+ round((m[pollutant].astype(float)/1000000),3).astype(str) + 'M'
+        m['text'] = '<b>'+m['State'] + '</b><br>'+const.UNITS[metric][unit_s]+': '+ round((m[pollutant].astype(float)/1000000),3).astype(str) + 'M'
     else:
-        m['text'] = '<b>'+m['State'] + '</b><br>'+const.UNITS[unit_s]+': '+ m[pollutant].round(2).astype(str)
-        maxx=m[pollutant].max()
+        m['text'] = '<b>'+m['State'] + '</b><br>'+const.UNITS[metric][unit_s]+': '+ m[pollutant].round(2).astype(str)
+        if pollutant == 'Cases_NO2':
+            maxx =1980
+        elif pollutant == 'Cases_PM':
+            maxx=250
+        elif pollutant == 'Cases_O3':
+            maxx=110
+        else:
+            maxx=m[pollutant].max()
     
     if region == 'United States':  #No outside geojson for USA so plot with plotly's internal USA-states locations
         fig = go.Figure(data=go.Choropleth(locations = m['State'],locationmode = 'USA-states',customdata=m['State'],
             z = m[pollutant],hovertext=m['text'],hoverinfo='text',
-                        colorscale=const.COLORSCALE,zmin=0,zmax=maxx,
+                        colorscale=const.CS[metric],zmin=0,zmax=maxx,
                         ))
         fig.add_traces(data=go.Choropleth(locations = st['State'],locationmode = 'USA-states',
             z = st[pollutant],hoverinfo='skip',
-                        colorscale=const.COLORSCALE,
+                        colorscale=const.CS[metric],
                         marker = dict(line_width=3),zmin=0,zmax=maxx))
         fig.update_geos(scope='usa')
         
     else: ##Use the uploaded geojson files for China and India states
         fig = go.Figure(data=go.Choropleth(locations=m["State"], geojson=c_gjson[region],z=m[pollutant],
                            hovertext=m['text'],featureidkey=feature_id[region], hoverinfo='text',
-                           colorscale=const.COLORSCALE,zmin=0,zmax=maxx))
+                           colorscale=const.CS[metric],zmin=0,zmax=maxx))
         fig.add_traces(data=go.Choropleth(locations = st['State'],geojson=c_gjson[region],featureidkey=feature_id[region],
             z = st[pollutant],hoverinfo='skip',
-                        colorscale=const.COLORSCALE,zmin=0,zmax=maxx,
+                        colorscale=const.CS[metric],zmin=0,zmax=maxx,
                         marker = dict(line_width=3)))
         fig.update_geos(fitbounds='locations',visible=False)
     fig.update_layout(legend_title_text='',margin={'l': 10, 'b': 10, 't': 10, 'r': 0}, hovermode='closest')
     fig.update_traces(customdata=m['State'])
     fig.update_yaxes(title=pollutant)
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+        family=const.FONTFAMILY
+        ))
     return fig
 
 ##Function to graph the time series for statewide trends compared to national average
 #region: is country, city: city dataframe, means: state dataframe, title: state abbreviation, cityname: name of selected city, axiscol_name: name of pollutant selected
-def create_time_series(region,city,means, title, cityname, axiscol_name):
+def create_time_series(region,city,means, title, cityname, axiscol_name,metric):
     fig = go.Figure()
+    unit_s = axiscol_name
     if axiscol_name == 'CO2':
         dec = 0
     else:
         dec=2
+    if metric !='Concentration':
+        axiscol_name = metric +'_'+axiscol_name
     if means.Count.mean() < 3:
         fig.add_trace(go.Scatter(x= means.Year, y=means[axiscol_name], name = 'Mean ', 
                              marker = {'color':'#4CB391'},line= {'color':'#4CB391'},
@@ -228,38 +281,57 @@ def create_time_series(region,city,means, title, cityname, axiscol_name):
 
     fig.update_traces(mode='lines+markers')
     fig.update_layout(hovermode="x unified",height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
-    fig.update_yaxes(title=const.UNITS[axiscol_name])
-
+    if metric != 'Concentration':
+        fig.update_yaxes(title=metric)
+    else:
+        fig.update_yaxes(title=const.UNITS[metric][unit_s])   
     fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
                        xref='paper', yref='paper', showarrow=False, align='left',
                        bgcolor='rgba(255, 255, 255, 0.5)', text=title)
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+        family = const.FONTFAMILY
+        ))
     return fig
 
 @callback(
     Output('states-scatter', 'figure'),
     [Input('region-selection', 'value'),
     Input('shaded-states', 'hoverData'),
-    Input('crossfilter-yaxis-column', 'value'),
+    Input('crossfilter-yaxis-columnstate', 'value'),
     Input('crossfilter-xaxis-type', 'value'),
     Input('crossfilter-year--slider','value'),
     Input('state-s','value'),
-    Input('city-sel','value')])
-def update_y_timeseries(region,hoverData, pollutant, xaxis_type,year_value,stateS,cityS):
+    Input('city-sel','value'),
+    Input('health-metricsstate','value')])
+def update_y_timeseries(region,hoverData, pollutant, xaxis_type,year_value,stateS,cityS,metric):
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
     state_name = hoverData['points'][0]['customdata'] if input_id == 'shaded-states' else stateS
     dff = df[region][df[region]['State']==state_name]
     dff = dff.query('Year ==@year_value')
     city_df = dff.query('CityID ==@cityS')
-    title = '<b>{}</b><br>{}'.format(state_name, pollutant)
+    unit_s = pollutant
+    if metric !='Concentration':
+        pollutant = metric +'_'+pollutant
+    title = '<b>{}</b><br>{}'.format(const.UNITS[metric][unit_s],state_name)
     plot = []
     for i in const.COUNTRY_SCATTER:
-        _c=dff.query('c40 ==@i')
-        plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[pollutant], mode='markers',
-                               customdata=_c['CityID'],
-                               hovertemplate="<b>%{customdata}</b><br>" +'Population: %{x} <br>' + f'{const.UNITS[pollutant]}: '+'%{y}',
+        
+        _c=dff.query('C40 ==@i')
+        if unit_s =='CO2':
+            plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[unit_s], mode='markers',
+                               customdata=np.stack((_c['CityID'],_c[pollutant]),axis=-1),
+                               hovertemplate="<b>%{customdata[0]}</b><br>" +'Population: %{x} <br>' + f"{const.UNITS['Concentration'][unit_s]}: "+'%{y} <br>',
                               marker={'color':const.COUNTRY_SCATTER[i]['color'], 'symbol':const.COUNTRY_SCATTER[i]['symbol'],'line':dict(width=1,
                                         color=const.COUNTRY_SCATTER[i]['color'])}))
+        else:
+            plot.append(go.Scatter(name = const.COUNTRY_SCATTER[i]['name'], x=_c['Population'], y=_c[pollutant], mode='markers',
+                                   customdata=np.stack((_c['CityID'],_c[unit_s],_c['PAF_'+unit_s],_c['Cases_'+unit_s]),axis=-1),
+                                   hovertemplate="<b>%{customdata[0]}</b><br>" +'Population: %{x} <br>' + f"{const.UNITS['Concentration'][unit_s]}: "+'%{customdata[1]} <br>'+ f"{const.UNITS['PAF'][unit_s]}: "+'%{customdata[2]} <br>' + f"{const.UNITS['Cases'][unit_s]}: "+'%{customdata[2]}',
+                                  marker={'color':const.COUNTRY_SCATTER[i]['color'], 'symbol':const.COUNTRY_SCATTER[i]['symbol'],'line':dict(width=1,
+                                            color=const.COUNTRY_SCATTER[i]['color'])}))
     fig =go.Figure(data=plot)
     fig.add_trace(
         go.Scattergl(
@@ -282,12 +354,16 @@ def update_y_timeseries(region,hoverData, pollutant, xaxis_type,year_value,state
 
     fig.update_xaxes(title='Population', type='linear' if xaxis_type == 'Linear' else 'log')
 
-    fig.update_yaxes(title=const.UNITS[pollutant])
-    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
+    fig.update_yaxes(title=metric)
+    fig.add_annotation(x=0, y=0.73, xanchor='left', yanchor='bottom',
                        xref='paper', yref='paper', showarrow=False, align='left',
                        bgcolor='rgba(255, 255, 255, 0.5)', text=title)
     fig.update_layout(height = 225, margin={'l': 40, 'b': 40, 't': 10, 'r': 0}, hovermode='closest',legend_title_text='')
-
+    fig.update_layout(
+        font=dict(
+        size=const.FONTSIZE,
+        family = const.FONTFAMILY
+        ))
     return fig
 
 @callback(
@@ -295,13 +371,17 @@ def update_y_timeseries(region,hoverData, pollutant, xaxis_type,year_value,state
     [Input('region-selection', 'value'),
     Input('states-scatter','hoverData'),
     Input('shaded-states', 'hoverData'),
-    Input('crossfilter-yaxis-column', 'value'),
+    Input('crossfilter-yaxis-columnstate', 'value'),
     Input('city-sel','value'),
-    Input("state-s", "value")])
-def update_x_timeseries(region,cityName, hoverData, pollutant,cityS,stateS):
+    Input("state-s", "value"),
+    Input('health-metricsstate','value')])
+def update_x_timeseries(region,cityName, hoverData, pollutant,cityS,stateS,metric):
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    city_sel = cityName['points'][0]['customdata'] if input_id == 'states-scatter' else cityS
+    city_sel = cityName['points'][0]['customdata'][0] if input_id == 'states-scatter' else cityS
+    unit_s =pollutant
+    if metric !='Concentration':
+        pollutant = metric +'_'+pollutant
     ds =stats[region] ##Selects the stats dict for the region
     ddf= df[region] ##Selects the dataset with the city data
     _df = ds['mean'][ds['mean']['State'] == stateS][['Year',pollutant,'w_'+pollutant]]
@@ -309,13 +389,14 @@ def update_x_timeseries(region,cityName, hoverData, pollutant,cityS,stateS):
     _df['Maximum'] = ds['max'][ds['max']['State'] == stateS][pollutant]
     _df['Count'] = ds['count'][ds['count']['State'] == stateS][pollutant]
     city = ddf[ddf.CityID==city_sel][pollutant]
-    return create_time_series(region,city,_df, stateS,city_sel,pollutant)
+    return create_time_series(region,city,_df, stateS,city_sel,unit_s,metric)
 
 ##Sync the states selected by hover with the dropdown menu
 @callback(
     Output("state-s", "value"),
     Input("state-s", "value"),
-    Input('shaded-states', 'hoverData')
+    Input('shaded-states', 'hoverData'),
+    
 )
 def sync_input(state_sel, hoverData):
     ctx = dash.callback_context
@@ -332,5 +413,5 @@ def sync_input(state_sel, hoverData):
 def sync_city_input(city_sel, hoverData):
     ctx = dash.callback_context
     input_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    value = hoverData['points'][0]['customdata'] if input_id == 'states-scatter' else city_sel
+    value = hoverData['points'][0]['customdata'][0] if input_id == 'states-scatter' else city_sel
     return value

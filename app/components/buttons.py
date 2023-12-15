@@ -29,16 +29,34 @@ def lin_log():
     return linlog
 
 def health_metrics(name):
-    metrics=dbc.RadioItems(
+    tt= dbc.Tooltip(
+                "Population Attributable Fraction (PAF) is the the proportion of cases for an outcome that can be attributed to the pollutant among the entire population",
+                target='PAF',
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    td= dbc.Tooltip(
+                "Annual cases for an outcome attributable to the pollutant",
+                target='Cases',
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    ts= dbc.Tooltip(
+                "Annual cases for an outcome attributable to the pollutant per 100K people",
+                target='Rates',
+                #is_open =True,
+                trigger ='hover focus legacy'
+            )
+    metrics=html.Div([dbc.RadioItems(
                     id='health-metrics'+name,
                     className="btn-group",
                     inputClassName="btn-check",
                     labelClassName="btn btn-outline-secondary",
                     labelCheckedClassName="secondary",
-                    options=[{'label': i, 'value': i} for i in ['Concentration','PAF','Cases','Rates']],                
+                    options=[{'label': i, 'value': i, 'label_id':i} for i in ['Concentration','PAF','Cases','Rates']],                
                     value='Concentration',
                     labelStyle={'display': 'inline-block'}
-                )
+                ),tt,td,ts])
     return metrics
 
 def details_tip(tar):

@@ -40,7 +40,7 @@ off_canva = dbc.Stack([
                        dbc.Collapse([dbc.Card([
                  html.H5(children='Metric',style ={'color':const.DISP['text']},),
                  html.P(   
-                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant (not available for CO2)",style ={'color':const.DISP['subtext']}
+                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant. For O3 and PM2.5, the metrics indicate premature deaths attributable to the corresponding pollutants. For NO2, the metrics indicate pediatric asthma incidence attributable to NO2. Health metrics are not available for CO2.",style ={'color':const.DISP['subtext']}
                 ),
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
@@ -73,7 +73,8 @@ city_drop = html.Div(dcc.Dropdown(
                     id='CityS',
                     options=sorted(df["CityCountry"].unique()),
                     value='Tokyo, Japan (13017)',
-                    placeholder= 'Select city...'
+                    placeholder= 'Select city...',
+                style ={'color':'#123C69', 'font-size':'12px'},
                 ),className='single-dropd')
 cont_drop = html.Div(dcc.Dropdown(
             id="ContS",

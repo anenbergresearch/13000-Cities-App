@@ -44,7 +44,7 @@ off_canva = dbc.Collapse([
                        dbc.Card([
                  html.H5(children='Metric',style ={'color':const.DISP['text']},),
                  html.P(   
-                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant (not available for CO2)",style ={'color':const.DISP['subtext']}
+                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant. For O3 and PM2.5, the metrics indicate premature deaths attributable to the corresponding pollutants. For NO2, the metrics indicate pediatric asthma incidence attributable to NO2. Health metrics are not available for CO2.",style ={'color':const.DISP['subtext']}
                 ),
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
@@ -94,16 +94,18 @@ city_drop = dcc.Dropdown(
 #Update state dropdown based on selected region
 @callback(
     Output("state-s", "options"),
+    Output("state-s",'value', allow_duplicate=True),
     Input("region-selection", "value"),
+    prevent_initial_call=True
 )
 def chained_callback_state(country):
-    return sorted(df[country]['State'].dropna().unique())
+    return sorted(df[country]['State'].dropna().unique()),sorted(df[country]['State'].unique())[0]
 
 
 #Update city dropdown based on selected state
 @callback(
     Output("city-sel", "options"),
-    Output("city-sel",'value',allow_duplicate=True),
+    Output("city-sel",'value', allow_duplicate=True),
     Input("region-selection", "value"),
     Input("state-s", "value"),
     prevent_initial_call=True
@@ -393,7 +395,8 @@ def update_x_timeseries(region,cityName, hoverData, pollutant,cityS,stateS,metri
 @callback(
     Output("state-s", "value"),
     Input("state-s", "value"),
-    Input('shaded-states', 'hoverData')
+    Input('shaded-states', 'hoverData'),
+    
 )
 def sync_input(state_sel, hoverData):
     ctx = dash.callback_context

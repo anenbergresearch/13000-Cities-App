@@ -12,7 +12,7 @@ HAQAST = 'assets/HAQAST.png'
 MILKEN = 'assets/Milken_Institute_School_of_Public_Health.jpg'
 dash.register_page(__name__, path='/')
 
-cb =pd.read_csv('./pages/Codebook.csv')
+cb =pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/Codebook.csv')
 df = data_prep.DFILT
 pc_df = data_prep.DF_CHANGE
 conc= {'CO2':15e6,'NO2': 20,'O3':75,'PM':100}
@@ -23,6 +23,8 @@ rates = {'CO2':'null','NO2': 100,'O3':40,'PM':110}
 m_limits = {'Concentration':conc,'PAF':paf,'Cases':cases,'Rates':rates}
 metrics = buttons.health_metrics('home')
 
+#embed = <iframe src="https://gwu.app.box.com/embed/s/d6ld5a691r0nx0do76jvdjx75ou2hx5m?sortColumn=date" width="800" height="550" frameborder="0" allowfullscreen webkitallowfullscreen msallowfullscreen></iframe>
+inst_video = html.Iframe(src="https://gwu.app.box.com/embed/s/d6ld5a691r0nx0do76jvdjx75ou2hx5m?sortColumn=date" , style={"height": "550px", "width": "800px"})
 
 button_group = html.Div(
     [
@@ -30,7 +32,14 @@ button_group = html.Div(
     className="radio-group",
 )
 slider = buttons.sliders(df)
-
+vtip= dbc.Tooltip(
+                "Open this tab for a walkthrough of the website.",
+                target='video',
+                is_open =False,
+                trigger ='hover focus legacy',
+                placement ='top',
+                style = {'color':'lightgray'}
+            )
 graph=dcc.Graph(
             id='welcome-map')
 pc_graph=dcc.Graph(
@@ -133,9 +142,11 @@ layout = dbc.Container([
     dbc.Tabs([
         
         dbc.Tab(label='Map', tab_id='welcome_map',style={'font-color':'blue'}),
+        
         dbc.Tab(label='Percent Change', tab_id='percent_change'),
         dbc.Tab(label='Data Codebook', tab_id='codebook'),
         dbc.Tab(label='Data Download', tab_id='download'),
+        dbc.Tab(label='Video Walkthrough',tab_id='inst_video', id ='video'),
         dbc.Tab(label='About', tab_id='about'),
         ],
         id='tabs',
@@ -143,6 +154,7 @@ layout = dbc.Container([
     ),
     html.Div(id="tab-content", className="p-4"),
     html.Hr(),
+    dbc.Row(vtip),
     dbc.Row([dbc.Col(html.Img(src=MILKEN, height="70px"),width=3),dbc.Col(html.Img(src=HAQAST, height="70px"),width=3)],justify="center")
     ],fluid=True
 )
@@ -197,6 +209,7 @@ tt= dbc.Tooltip(
                 placement ='top',
                 style = {'color':'lightgray'}
             )
+
 
 ##Deactivates CO2 if anything but concentration is selected and vice-versa
 @callback(
@@ -439,6 +452,8 @@ def render_tab_content(active_tab):
             return dbc.Stack([dbc.Row(html.H5(children='Select the country, city and/or year range to download filtered dataset (button below table)',style={
                     'textAlign': 'center',
                     'color': const.DISP['text'],'font':'helvetica'})),dbc.Row([dbc.Col(country_drop, width=5),dbc.Col(city_drop)]),dbc.Row(range_slider),dbc.Row(dtable),dbc.Row(download_button),dbc.Row(download_component)],gap=2)
+        elif active_tab == 'inst_video':
+            return [dbc.Row([inst_video], justify="center")]
         elif active_tab=='codebook':
             return [dbc.Row(dbc.Stack([dbc.Row(download),dbc.Row(),dbc.Row(tt),dbc.Row(html.Hr()),dbc.Row(dbc.Col(table))],gap=2))]
             

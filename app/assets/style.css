@@ -32,9 +32,7 @@
     --bs-btn-disabled-border-color: #123C69;
 }
 
-element.style {
-    display: inline-block;
-}
+
 .radio-group .btn-group > .form-check:not(:first-child) > .btn {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
@@ -252,6 +250,12 @@ hr {
   font-size: 18px;
 }
 
+
+.Select-menu-outer {
+    font-size: 10px;
+}
+
+
 .single-dropd .Select--single>.Select-control .Select-value, .Select-placeholder{
   font-size: 18px;
   color: #123C69;
@@ -262,7 +266,7 @@ hr {
     padding-left: 10px;
     padding-right: 10px;
     vertical-align: middle;
-    font-size: small;
+    font-size: 12px;
     color: #123C69;
 }
 
@@ -290,20 +294,6 @@ hr {
     --bs-nav-link-font-weight: ;
     --bs-nav-link-color: #d9d0bb;
     --bs-nav-link-hover-color: #ffd400;}
-.ors {
-    --GW_White: #ffffff;
-    --GW_LightBlue: #0073aa;
-    --GW_DarkBlue: #033c5a;
-    --GW_DarkGrey: #444444;
-    --GW_Brown: #a75523;
-    --GW_LightGreen: #78be20;
-    --GW_DarkGreen: #008364;
-    --GW_Yellow: #ffd400;
-    --GW_Red: #c9102f;
-    --GW_Buff: #aa9868;
-    --GW_UtilityBuff: #e3dccc;
-    --GW_HoverBuff: #d9d0bb;
-}
 
 .card {
     --bs-card-color: #033c5a;
@@ -315,18 +305,7 @@ hr {
     font-size:22px;
     --bs-nav-links-hover-color: #ffc451;
 }
-.nav-tabs {
-    color: #ffc451;
-    --bs-nav-tabs-border-width: 1px;
-    --bs-nav-tabs-border-color: #dee2e6;
-    --bs-nav-tabs-border-radius: 0.375rem;
-    --bs-nav-tabs-link-hover-border-color: #e9ecef #e9ecef #fff;
-    --bs-nav-tabs-link-color: #ffc451;
-    --bs-nav-tabs-link-active-bg: #fff;
-    --bs-nav-tabs-link-bg: #033c5a;
-    --bs-nav-tabs-link-active-border-color: #6A8099 #6A8099 #dee2e6;
-    border-bottom: var(--bs-nav-tabs-border-width) solid var(--bs-nav-tabs-border-color);
-}
+
 
 .nav {
     --bs-nav-link-hover-color: #ffc451;}

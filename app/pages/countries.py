@@ -24,11 +24,15 @@ main_graph =dcc.Graph(
         )
 metrics = buttons.health_metrics('country')
 
-pol_buttons = dbc.Stack([metrics, buttons.pol_buttons('country')
-            ],className="radio-group")
+
 
 pops = html.Div(buttons.pop_weighted('')
             ,className="radio-group")
+
+pop_stack = dbc.Stack([buttons.pol_buttons('country'),buttons.pop_weighted('')],className="radio-group",direction="horizontal",gap=4)
+
+pol_buttons = dbc.Stack([metrics, pop_stack
+            ],className="radio-group")
 graph_stack =dbc.Stack([
         dcc.Graph(id='cities-scatter', hoverData={'points': [{'customdata': 'Washington D.C., United States (860)'}]}),
         dcc.Graph(id='country-trends-graph'),
@@ -50,7 +54,7 @@ lin_log=html.Div(buttons.lin_log(),className='ms-auto radio-group')
 off_canva = dbc.Collapse([dbc.Card([
                 html.H5(children='Metric',style ={'color':const.DISP['text']},),
                  html.P(   
-                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant (not available for CO2)",style ={'color':const.DISP['subtext']}
+                    children="Select which metric to visualize. Concentration will display the pollutant concentrations, and the others will display health metrics related to each pollutant. For O3 and PM2.5, the metrics indicate premature deaths attributable to the corresponding pollutants. For NO2, the metrics indicate pediatric asthma incidence attributable to NO2. Health metrics are not available for CO2.",style ={'color':const.DISP['subtext']}
                 ),
                  html.H5(children='Pollutant',style ={'color':const.DISP['text']},),
                  html.P(   
@@ -95,7 +99,7 @@ layout =dbc.Container([dbc.Row([dbc.Col(width=2),
             })])),dbc.Col(inst,width=2)],align='center'),
     dbc.Row(dbc.Col(off_canva)),
     html.Hr(),
-    dbc.Row([dbc.Col(pol_buttons,width=4),dbc.Col(pops,width=3),dbc.Col(country_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=3)]),
+    dbc.Row([dbc.Col(pol_buttons,width=7),dbc.Col(country_drop,width=2),dbc.Col(dbc.Stack([city_drop,lin_log]),width=3)]),
     
     dbc.Row([dbc.Col(main_graph,width=7),dbc.Col(graph_stack,width=5),html.Hr()]),
     dbc.Row(slider)],fluid=True)
