@@ -13,8 +13,9 @@
     docker login
 ### 3.	pull remote repository (13000cities)
     docker pull srunkel/13000cities:<tag>
-### 4.	Run the docker on remote server and specify port
-    docker run -p 8050:8050 srunkel/13000cities:<tag>
+### 4.	Run the docker on remote server and specify port. Set to automatically restart if crashed
+    docker run --name multipage -p 8050:8050 srunkel/13000cities:<tag>
+    docker update --restart unless-stopped multipage
 ### 5.	Access app from browser using IP address and port: http://83.229.112.187:8050/cities
 
 
