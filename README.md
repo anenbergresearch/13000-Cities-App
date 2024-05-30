@@ -13,11 +13,16 @@
     docker login
 ### 3.	pull remote repository (13000cities)
     docker pull srunkel/13000cities:<tag>
+### 4. Check for running instances on port 8050 and stop it
+    docker ps -a
+    docker remove <name>    
 ### 4.	Run the docker on remote server and specify port. Set to automatically restart if crashed
-    docker run --name multipage -p 8050:8050 srunkel/13000cities:<tag>
+    docker run --name multipage -p 443:8050 srunkel/13000cities:<tag>
     docker update --restart unless-stopped multipage
 ### 5.	Access app from browser using IP address and port: http://83.229.112.187:8050/cities
 
+# Refresh SSL Certificate
+To refresh the SSL certificate, log into ssl.IONOS.com and generate one with the domain name.
 
 # Example:
     docker build --platform linux/amd64 -t 13000-app .
