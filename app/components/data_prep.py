@@ -4,7 +4,7 @@ import json
 import pickle
 from urllib.request import urlopen
 
-df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SR-v2.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/unified_data_SYK_Apr2025.csv')
 
 def w_avg(df, values, weights):
     d = df[values]
