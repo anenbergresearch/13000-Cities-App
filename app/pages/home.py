@@ -10,6 +10,7 @@ import copy
 
 HAQAST = 'assets/HAQAST.png'
 MILKEN = 'assets/Milken_Institute_School_of_Public_Health.jpg'
+
 dash.register_page(__name__, path='/')
 
 cb =pd.read_csv('https://raw.githubusercontent.com/anenbergresearch/app-files/main/Codebook.csv')
